@@ -1,0 +1,87 @@
+<!-- course.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Path - Course Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .wireframe-box {
+            border: 2px dashed #999;
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="wireframe-box p-4 mb-4">
+        <div class="flex justify-between items-center">
+            <div class="text-xl font-bold">🌍 Planet Path</div>
+            <div class="px-3 py-1 border border-gray-400">Back to Catalog</div>
+        </div>
+    </header>
+
+    <div class="flex flex-col md:flex-row gap-4 px-4">
+        <!-- Main Content Area -->
+        <main class="flex-1">
+            <!-- Video Player Box -->
+            <div class="wireframe-box mb-4">
+                <div class="aspect-video bg-gray-800 flex items-center justify-center">
+                    <div class="text-white text-center">
+                        <div class="text-4xl mb-2">▶</div>
+                        <div>Video Player</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lesson Info -->
+            <div class="wireframe-box p-4 mb-4">
+                <h2 class="text-xl font-bold mb-2">Lesson 1: Introduction to Climate Change</h2>
+                <p class="text-gray-600 text-sm mb-4">Understanding the basics of climate science and its global impact.</p>
+                <div class="flex gap-2">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">15 min</span>
+                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Beginner</span>
+                </div>
+            </div>
+
+            <!-- Complete Lesson Button -->
+            <div class="mb-4">
+                <button class="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold">
+                    Complete Lesson
+                </button>
+            </div>
+        </main>
+
+        <!-- Outline Sidebar -->
+        <aside class="w-full md:w-64">
+            <div class="wireframe-box p-4">
+                <h3 class="font-bold mb-4">Course Outline</h3>
+                <div class="space-y-2">
+                    <div class="p-2 bg-green-100 border-l-4 border-green-600">
+                        <div class="text-sm font-semibold">✓ Lesson 1: Introduction</div>
+                        <div class="text-xs text-gray-600">Completed</div>
+                    </div>
+                    <div class="p-2 border-l-4 border-gray-300">
+                        <div class="text-sm">Lesson 2: Greenhouse Effect</div>
+                        <div class="text-xs text-gray-500">Not started</div>
+                    </div>
+                    <div class="p-2 border-l-4 border-gray-300">
+                        <div class="text-sm">Lesson 3: Climate Impacts</div>
+                        <div class="text-xs text-gray-500">Not started</div>
+                    </div>
+                    <div class="p-2 border-l-4 border-gray-300">
+                        <div class="text-sm">Lesson 4: Solutions</div>
+                        <div class="text-xs text-gray-500">Not started</div>
+                    </div>
+                    <div class="p-2 border-l-4 border-gray-300">
+                        <div class="text-sm">Lesson 5: Action Plan</div>
+                        <div class="text-xs text-gray-500">Not started</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</body>
+</html>
+

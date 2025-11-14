@@ -1,0 +1,112 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Path - Learner Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .wireframe-box {
+            border: 2px dashed #999;
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="wireframe-box p-4 mb-4">
+        <div class="flex justify-between items-center">
+            <div class="text-xl font-bold">🌍 Planet Path</div>
+            <div class="px-3 py-1 border border-gray-400">Settings</div>
+        </div>
+    </header>
+
+    <!-- Greeting Header -->
+    <section class="px-4 mb-6">
+        <div class="wireframe-box p-6">
+            <h1 class="text-2xl font-bold mb-2">Welcome back, Grace! 👋</h1>
+            <p class="text-gray-600">Continue your climate action journey</p>
+        </div>
+    </section>
+
+    <!-- Progress Bars -->
+    <section class="px-4 mb-6">
+        <div class="wireframe-box p-4 mb-4">
+            <h3 class="font-bold mb-3">Learning Progress</h3>
+            <div class="space-y-3">
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Climate Science Basics</span>
+                        <span>60%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-600 h-2 rounded-full" style="width: 60%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Sustainable Agriculture</span>
+                        <span>30%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-600 h-2 rounded-full" style="width: 30%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Renewable Energy</span>
+                        <span>0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Activity -->
+    <section class="px-4 mb-6">
+        <div class="wireframe-box p-4">
+            <h3 class="font-bold mb-3">Recent Activity</h3>
+            <div class="space-y-2">
+                <div class="p-3 border-l-4 border-green-600 bg-green-50">
+                    <div class="text-sm font-semibold">Completed: Introduction to Climate Change</div>
+                    <div class="text-xs text-gray-600">2 hours ago</div>
+                </div>
+                <div class="p-3 border-l-4 border-blue-600 bg-blue-50">
+                    <div class="text-sm font-semibold">Enrolled: Sustainable Agriculture</div>
+                    <div class="text-xs text-gray-600">1 day ago</div>
+                </div>
+                <div class="p-3 border-l-4 border-yellow-600 bg-yellow-50">
+                    <div class="text-sm font-semibold">Applied: Tree Planting Project</div>
+                    <div class="text-xs text-gray-600">3 days ago</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Badges Placeholder -->
+    <section class="px-4 mb-6">
+        <div class="wireframe-box p-4">
+            <h3 class="font-bold mb-3">Your Badges</h3>
+            <div class="flex gap-4">
+                <div class="w-16 h-16 bg-yellow-200 border-2 border-yellow-400 rounded-full flex items-center justify-center">
+                    🏆
+                </div>
+                <div class="w-16 h-16 bg-gray-200 border-2 border-gray-400 rounded-full flex items-center justify-center">
+                    📚
+                </div>
+                <div class="w-16 h-16 bg-gray-200 border-2 border-gray-400 rounded-full flex items-center justify-center">
+                    🌱
+                </div>
+                <div class="w-16 h-16 bg-gray-200 border-2 border-gray-400 rounded-full flex items-center justify-center">
+                    +
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+</html>
+
