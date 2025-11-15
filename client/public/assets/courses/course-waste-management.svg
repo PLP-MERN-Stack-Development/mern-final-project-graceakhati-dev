@@ -1,0 +1,21 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Recycling Symbol Arrow 1 (Top) -->
+  <path d="M 100 40 L 130 60 L 120 80 L 100 70 L 100 40" fill="#2E7D32"/>
+  <path d="M 100 40 L 130 60 L 120 80 L 100 70" stroke="#A5D6A7" stroke-width="2" fill="none"/>
+  
+  <!-- Recycling Symbol Arrow 2 (Right) -->
+  <path d="M 160 100 L 140 130 L 120 120 L 130 100 L 160 100" fill="#81C784"/>
+  <path d="M 160 100 L 140 130 L 120 120 L 130 100" stroke="#A5D6A7" stroke-width="2" fill="none"/>
+  
+  <!-- Recycling Symbol Arrow 3 (Left) -->
+  <path d="M 40 100 L 60 70 L 80 80 L 70 100 L 40 100" fill="#A5D6A7"/>
+  <path d="M 40 100 L 60 70 L 80 80 L 70 100" stroke="#2E7D32" stroke-width="2" fill="none"/>
+  
+  <!-- Center Circle -->
+  <circle cx="100" cy="100" r="15" fill="#D7CCC8" stroke="#8D6E63" stroke-width="2"/>
+  
+  <!-- Small Decorative Elements -->
+  <rect x="85" y="150" width="30" height="20" rx="4" fill="#81C784" opacity="0.6"/>
+  <rect x="90" y="155" width="20" height="10" rx="2" fill="#2E7D32" opacity="0.4"/>
+</svg>
+

@@ -1,0 +1,40 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Building Structure -->
+  <rect x="70" y="100" width="60" height="80" rx="6" fill="#A5D6A7" stroke="#2E7D32" stroke-width="2"/>
+  
+  <!-- Building Windows -->
+  <rect x="80" y="110" width="12" height="15" rx="2" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="100" y="110" width="12" height="15" rx="2" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="120" y="110" width="12" height="15" rx="2" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="80" y="135" width="12" height="15" rx="2" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="100" y="135" width="12" height="15" rx="2" fill="#B3E5FC" opacity="0.8"/>
+  <rect x="120" y="135" width="12" height="15" rx="2" fill="#B3E5FC" opacity="0.8"/>
+  
+  <!-- Roof -->
+  <polygon points="60,100 100,70 140,100" fill="#81C784" stroke="#2E7D32" stroke-width="2"/>
+  
+  <!-- Chimney/Smokestack -->
+  <rect x="105" y="60" width="8" height="20" rx="2" fill="#8D6E63"/>
+  
+  <!-- Soft Smoke/Steam (Green Energy) -->
+  <ellipse cx="109" cy="50" rx="8" ry="12" fill="#A5D6A7" opacity="0.5"/>
+  <ellipse cx="109" cy="40" rx="6" ry="10" fill="#A5D6A7" opacity="0.4"/>
+  <ellipse cx="109" cy="30" rx="4" ry="8" fill="#A5D6A7" opacity="0.3"/>
+  
+  <!-- Green Energy Symbol (Leaf) -->
+  <path d="M 100 50 Q 95 45 100 40 Q 105 45 100 50" fill="#2E7D32" opacity="0.8"/>
+  <line x1="100" y1="40" x2="100" y2="55" stroke="#2E7D32" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Solar Panel on Roof -->
+  <rect x="75" y="75" width="20" height="12" rx="2" fill="#2E7D32" opacity="0.7"/>
+  <line x1="80" y1="75" x2="80" y2="87" stroke="#A5D6A7" stroke-width="0.5"/>
+  <line x1="90" y1="75" x2="90" y2="87" stroke="#A5D6A7" stroke-width="0.5"/>
+  
+  <!-- Base/Ground -->
+  <ellipse cx="100" cy="190" rx="50" ry="10" fill="#8D6E63" opacity="0.5"/>
+  
+  <!-- Decorative Plants -->
+  <circle cx="50" cy="170" r="8" fill="#81C784"/>
+  <circle cx="150" cy="175" r="6" fill="#81C784"/>
+</svg>
+
