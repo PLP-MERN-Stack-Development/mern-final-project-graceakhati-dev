@@ -1,7 +1,29 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import Layout, { LayoutProps } from './Layout';
+import Layout, { LayoutProps } from './layout/Layout';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthContextType } from '@/context/AuthContext';
+
+// Mock Footer component
+// Layout.tsx is at components/layout/Layout.tsx and imports './Footer'
+// So Footer is at components/layout/Footer.tsx
+// Test is at components/Layout.test.tsx, so we mock './layout/Footer'
+vi.mock('./layout/Footer', () => {
+  const Footer = () => <footer data-testid="footer">Footer</footer>;
+  return { default: Footer };
+});
+
+// Mock NavBar component
+vi.mock('../NavBar', () => ({
+  default: ({ currentPage }: { currentPage?: string }) => (
+    <nav data-testid="navbar">NavBar {currentPage}</nav>
+  ),
+}));
+
+// Mock the useAuth hook
+vi.mock('@/hooks/useAuth');
+const mockUseAuth = vi.mocked(useAuth);
 
 // Helper function to render component with router
 const renderWithRouter = (props: LayoutProps) => {
@@ -13,6 +35,21 @@ const renderWithRouter = (props: LayoutProps) => {
 };
 
 describe('Layout Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default mock: unauthenticated user
+    mockUseAuth.mockReturnValue({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: vi.fn(),
+      signup: vi.fn(),
+      loginWithGoogle: vi.fn(),
+      signupWithGoogle: vi.fn(),
+      logout: vi.fn(),
+    } as AuthContextType);
+  });
   describe('Rendering', () => {
     it('should render layout with children', () => {
       renderWithRouter({ children: <div>Test Content</div> });
