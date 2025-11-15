@@ -63,13 +63,11 @@ const courses = [
 
 function Catalog() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState<string>('all');
+  const [selectedPrice, setSelectedPrice] = useState<string>('all');
 
-  // Filter courses based on search query
-  const filteredCourses = courses.filter((course) =>
-    course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // UI only - no actual filtering logic
+  const filteredCourses = courses;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -77,18 +75,69 @@ function Catalog() {
         Course Catalog
       </h1>
 
-      {/* Search Bar */}
-      <div className="mb-8">
-        <input
-          type="text"
-          placeholder="Search courses..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full md:w-1/2 px-4 py-3 border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
-        />
+      {/* Search and Filter Section */}
+      <div className="mb-8 space-y-4">
+        {/* Search Bar */}
+        <div>
+          <input
+            type="text"
+            placeholder="Search courses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:w-1/2 px-4 py-3 border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+          />
+        </div>
+
+        {/* Filter Options */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Level:
+            </label>
+            <select
+              value={selectedLevel}
+              onChange={(e) => setSelectedLevel(e.target.value)}
+              className="px-4 py-2 border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 transition-all bg-white"
+            >
+              <option value="all">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Expert</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-gray-700">
+              Price:
+            </label>
+            <select
+              value={selectedPrice}
+              onChange={(e) => setSelectedPrice(e.target.value)}
+              className="px-4 py-2 border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 transition-all bg-white"
+            >
+              <option value="all">All Prices</option>
+              <option value="free">Free</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+
+          {/* Level Tags Display */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-gray-700">Tags:</span>
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold border border-green-200">
+              Beginner
+            </span>
+            <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold border border-amber-200">
+              Intermediate
+            </span>
+            <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold border border-orange-200">
+              Expert
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Course Cards */}
+      {/* Course Cards Grid */}
       {filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course) => (
@@ -122,4 +171,3 @@ function Catalog() {
 }
 
 export default Catalog;
-

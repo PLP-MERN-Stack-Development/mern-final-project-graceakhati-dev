@@ -1,33 +1,28 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ImageLoader from './ImageLoader';
+import { useAuth } from '@/hooks/useAuth';
 import { navIcons } from '@/utils/imagePaths';
+import { dashboardAvatars } from '@/utils/imagePaths';
 
 export interface NavBarProps {
   currentPage?: string;
 }
 
-export type NavPage =
-  | 'home'
-  | 'courses'
-  | 'dashboard'
-  | 'projects'
-  | 'badges'
-  | 'certificates'
-  | 'settings';
-
-const navLinks: { label: string; path: string; page: NavPage; icon: string }[] = [
-  { label: 'Home', path: '/', page: 'home', icon: navIcons.home },
-  { label: 'Courses', path: '/catalog', page: 'courses', icon: navIcons.courses },
-  { label: 'Dashboard', path: '/dashboard', page: 'dashboard', icon: navIcons.dashboard },
-  { label: 'Projects', path: '/projects', page: 'projects', icon: navIcons.projects },
-  { label: 'Badges', path: '/badges', page: 'badges', icon: navIcons.badges },
-  { label: 'Certificates', path: '/certificates', page: 'certificates', icon: navIcons.certificates },
-  { label: 'Settings', path: '/settings', page: 'settings', icon: navIcons.settings },
-];
+interface NavLink {
+  label: string;
+  path: string;
+  icon: string;
+  ariaLabel: string;
+}
 
 function NavBar({ currentPage }: NavBarProps) {
+  const { user, isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -37,8 +32,139 @@ function NavBar({ currentPage }: NavBarProps) {
     setIsMobileMenuOpen(false);
   };
 
-  const isActive = (page: NavPage) => {
-    return currentPage === page;
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsDropdownOpen(false);
+    closeMobileMenu();
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  // Determine which links to show based on authentication and role
+  const getNavLinks = (): NavLink[] => {
+    if (!isAuthenticated || !user) {
+      // Not authenticated: show Login, Courses, About
+      return [
+        {
+          label: 'Courses',
+          path: '/catalog',
+          icon: navIcons.courses,
+          ariaLabel: 'Browse courses',
+        },
+        {
+          label: 'About',
+          path: '/',
+          icon: navIcons.home,
+          ariaLabel: 'About Planet Path',
+        },
+        {
+          label: 'Login',
+          path: '/login',
+          icon: navIcons.settings,
+          ariaLabel: 'Login to your account',
+        },
+      ];
+    }
+
+    switch (user.role) {
+      case 'student':
+        return [
+          {
+            label: 'Home',
+            path: '/',
+            icon: navIcons.home,
+            ariaLabel: 'Go to home page',
+          },
+          {
+            label: 'Courses',
+            path: '/catalog',
+            icon: navIcons.courses,
+            ariaLabel: 'Browse courses',
+          },
+          {
+            label: 'Dashboard',
+            path: '/dashboard',
+            icon: navIcons.dashboard,
+            ariaLabel: 'View your student dashboard',
+          },
+        ];
+
+      case 'instructor':
+        return [
+          {
+            label: 'Home',
+            path: '/',
+            icon: navIcons.home,
+            ariaLabel: 'Go to home page',
+          },
+          {
+            label: 'Courses',
+            path: '/catalog',
+            icon: navIcons.courses,
+            ariaLabel: 'Browse courses',
+          },
+          {
+            label: 'Instructor',
+            path: '/instructor',
+            icon: navIcons.dashboard,
+            ariaLabel: 'Go to instructor dashboard',
+          },
+        ];
+
+      case 'admin':
+        return [
+          {
+            label: 'Home',
+            path: '/',
+            icon: navIcons.home,
+            ariaLabel: 'Go to home page',
+          },
+          {
+            label: 'Admin',
+            path: '/admin',
+            icon: navIcons.settings,
+            ariaLabel: 'Go to admin dashboard',
+          },
+          {
+            label: 'Reports',
+            path: '/admin/reports',
+            icon: navIcons.dashboard,
+            ariaLabel: 'View reports',
+          },
+        ];
+
+      default:
+        return [];
+    }
+  };
+
+  const navLinks = getNavLinks();
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
   return (
@@ -54,6 +180,7 @@ function NavBar({ currentPage }: NavBarProps) {
             className="flex items-center space-x-2 text-planet-green-dark hover:text-planet-green-dark/80 transition-colors duration-200 group"
             onClick={closeMobileMenu}
             data-testid="navbar-logo"
+            aria-label="Planet Path Home"
           >
             <div className="group-hover:animate-bounce-hover transition-transform duration-200">
               <ImageLoader
@@ -70,19 +197,20 @@ function NavBar({ currentPage }: NavBarProps) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => {
-              const active = isActive(link.page);
+            {navLinks.map((link, index) => {
+              const active = isActive(link.path);
               return (
                 <Link
-                  key={link.page}
+                  key={`${link.path}-${index}`}
                   to={link.path}
                   className={`group flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     active
                       ? 'bg-planet-green-dark text-white shadow-md'
                       : 'text-gray-700 hover:text-planet-green-dark hover:bg-green-50'
                   }`}
-                  data-testid={`nav-link-${link.page}`}
+                  data-testid={`nav-link-${link.path}`}
                   aria-current={active ? 'page' : undefined}
+                  aria-label={link.ariaLabel}
                 >
                   <div
                     className={`transition-transform duration-200 ${
@@ -96,14 +224,7 @@ function NavBar({ currentPage }: NavBarProps) {
                         active
                           ? 'brightness-0 invert'
                           : 'opacity-60 group-hover:opacity-100'
-                      }`}
-                      style={
-                        !active
-                          ? {
-                              filter: 'brightness(0) saturate(100%) invert(18%) sepia(100%) saturate(1000%) hue-rotate(87deg) brightness(90%) contrast(90%)',
-                            }
-                          : undefined
-                      }
+                      } ${!active ? 'brightness-0 saturate-100 invert-[18%] sepia-[100%] saturate-[1000%] hue-rotate-[87deg] brightness-90 contrast-90' : ''}`}
                       lazy={false}
                     />
                   </div>
@@ -111,6 +232,76 @@ function NavBar({ currentPage }: NavBarProps) {
                 </Link>
               );
             })}
+
+            {/* Avatar Dropdown (if authenticated) */}
+            {isAuthenticated && user && (
+              <div className="relative ml-4" ref={dropdownRef}>
+                <button
+                  onClick={toggleDropdown}
+                  className="flex items-center space-x-2 p-2 rounded-full hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all duration-200"
+                  aria-label="User menu"
+                  aria-haspopup="true"
+                  aria-expanded={isDropdownOpen}
+                  data-testid="user-menu-button"
+                >
+                  <ImageLoader
+                    src={dashboardAvatars.default}
+                    alt={`${user.name} avatar`}
+                    className="w-8 h-8 rounded-full border-2 border-green-200"
+                    lazy={false}
+                  />
+                  <span className="font-medium text-gray-700 hidden lg:inline">
+                    {user.name}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
+                      isDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 focus:outline-none animate-fade-in z-50"
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-labelledby="user-menu"
+                  >
+                    <Link
+                      to="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        closeMobileMenu();
+                      }}
+                      aria-label="View profile"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600"
+                      role="menuitem"
+                      aria-label="Logout"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -161,11 +352,11 @@ function NavBar({ currentPage }: NavBarProps) {
           data-testid="mobile-menu"
         >
           <div className="py-4 space-y-2">
-            {navLinks.map((link) => {
-              const active = isActive(link.page);
+            {navLinks.map((link, index) => {
+              const active = isActive(link.path);
               return (
                 <Link
-                  key={link.page}
+                  key={`${link.path}-${index}`}
                   to={link.path}
                   onClick={closeMobileMenu}
                   className={`group flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
@@ -173,8 +364,9 @@ function NavBar({ currentPage }: NavBarProps) {
                       ? 'bg-planet-green-dark text-white shadow-md'
                       : 'text-gray-700 hover:text-planet-green-dark hover:bg-green-50'
                   }`}
-                  data-testid={`mobile-nav-link-${link.page}`}
+                  data-testid={`mobile-nav-link-${link.path}`}
                   aria-current={active ? 'page' : undefined}
+                  aria-label={link.ariaLabel}
                 >
                   <div
                     className={`transition-transform duration-200 ${
@@ -188,14 +380,7 @@ function NavBar({ currentPage }: NavBarProps) {
                         active
                           ? 'brightness-0 invert'
                           : 'opacity-60 group-hover:opacity-100'
-                      }`}
-                      style={
-                        !active
-                          ? {
-                              filter: 'brightness(0) saturate(100%) invert(18%) sepia(100%) saturate(1000%) hue-rotate(87deg) brightness(90%) contrast(90%)',
-                            }
-                          : undefined
-                      }
+                      } ${!active ? 'brightness-0 saturate-100 invert-[18%] sepia-[100%] saturate-[1000%] hue-rotate-[87deg] brightness-90 contrast-90' : ''}`}
                       lazy={false}
                     />
                   </div>
@@ -203,6 +388,55 @@ function NavBar({ currentPage }: NavBarProps) {
                 </Link>
               );
             })}
+
+            {/* Profile and Logout (Mobile - if authenticated) */}
+            {isAuthenticated && user && (
+              <>
+                <Link
+                  to="/profile"
+                  onClick={closeMobileMenu}
+                  className={`group flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActive('/profile')
+                      ? 'bg-planet-green-dark text-white shadow-md'
+                      : 'text-gray-700 hover:text-planet-green-dark hover:bg-green-50'
+                  }`}
+                  aria-label="View profile"
+                  data-testid="mobile-nav-link-profile"
+                >
+                  <ImageLoader
+                    src={dashboardAvatars.default}
+                    alt={`${user.name} avatar`}
+                    className="w-6 h-6 rounded-full border-2 border-green-200"
+                    lazy={false}
+                  />
+                  <span>Profile</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    closeMobileMenu();
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 transition-all duration-200 text-left"
+                  aria-label="Logout"
+                  data-testid="mobile-nav-link-logout"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  <span>Logout</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -211,4 +445,3 @@ function NavBar({ currentPage }: NavBarProps) {
 }
 
 export default NavBar;
-
