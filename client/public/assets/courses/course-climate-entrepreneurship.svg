@@ -1,0 +1,33 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Lightbulb -->
+  <circle cx="100" cy="80" r="35" fill="#FFF9C4" stroke="#FFE082" stroke-width="2"/>
+  <circle cx="100" cy="80" r="28" fill="#FFE082" opacity="0.4"/>
+  
+  <!-- Lightbulb Base -->
+  <rect x="85" y="115" width="30" height="15" rx="3" fill="#8D6E63"/>
+  <rect x="90" y="130" width="20" height="5" rx="2" fill="#D7CCC8"/>
+  
+  <!-- Lightbulb Filament -->
+  <path d="M 100 60 Q 95 70 100 80 Q 105 70 100 60" stroke="#8D6E63" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <line x1="100" y1="60" x2="100" y2="80" stroke="#8D6E63" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Light Rays -->
+  <line x1="100" y1="45" x2="100" y2="30" stroke="#FFE082" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="65" y1="80" x2="50" y2="80" stroke="#FFE082" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="135" y1="80" x2="150" y2="80" stroke="#FFE082" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="75" y1="55" x2="65" y2="45" stroke="#FFE082" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="125" y1="55" x2="135" y2="45" stroke="#FFE082" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+  
+  <!-- Leaf -->
+  <path d="M 100 140 Q 115 130 125 145 Q 120 155 110 160 Q 105 150 100 140" fill="#2E7D32"/>
+  <path d="M 100 140 Q 115 130 125 145 Q 120 155 110 160 Q 105 150 100 140" stroke="#81C784" stroke-width="1.5" fill="none"/>
+  <!-- Leaf Vein -->
+  <path d="M 100 140 Q 110 150 110 160" stroke="#A5D6A7" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Leaf Stem -->
+  <line x1="110" y1="160" x2="115" y2="170" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Small Decorative Elements -->
+  <circle cx="60" cy="120" r="6" fill="#A5D6A7" opacity="0.6"/>
+  <circle cx="140" cy="130" r="5" fill="#81C784" opacity="0.6"/>
+</svg>
+

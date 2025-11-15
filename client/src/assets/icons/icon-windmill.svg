@@ -1,0 +1,31 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Wind Turbine Tower -->
+  <rect x="95" y="120" width="10" height="70" rx="2" fill="#8D6E63"/>
+  
+  <!-- Turbine Base -->
+  <ellipse cx="100" cy="190" rx="20" ry="8" fill="#8D6E63" opacity="0.7"/>
+  
+  <!-- Wind Turbine Hub -->
+  <circle cx="100" cy="120" r="8" fill="#A5D6A7" stroke="#2E7D32" stroke-width="2"/>
+  
+  <!-- Turbine Blades -->
+  <!-- Blade 1 (Top) -->
+  <ellipse cx="100" cy="80" rx="25" ry="8" fill="#B3E5FC" stroke="#81C784" stroke-width="1.5" opacity="0.9"/>
+  <!-- Blade 2 (Right) -->
+  <ellipse cx="140" cy="120" rx="8" ry="25" fill="#B3E5FC" stroke="#81C784" stroke-width="1.5" opacity="0.9"/>
+  <!-- Blade 3 (Left) -->
+  <ellipse cx="60" cy="120" rx="8" ry="25" fill="#B3E5FC" stroke="#81C784" stroke-width="1.5" opacity="0.9"/>
+  
+  <!-- Wind Lines (Decorative) -->
+  <path d="M 30 60 Q 40 65 50 60" stroke="#B3E5FC" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 30 80 Q 40 85 50 80" stroke="#B3E5FC" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 150 60 Q 160 65 170 60" stroke="#B3E5FC" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 150 80 Q 160 85 170 80" stroke="#B3E5FC" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Small Clouds -->
+  <ellipse cx="40" cy="40" rx="15" ry="10" fill="#FFFFFF" opacity="0.7"/>
+  <ellipse cx="50" cy="40" rx="12" ry="8" fill="#FFFFFF" opacity="0.7"/>
+  <ellipse cx="160" cy="50" rx="12" ry="8" fill="#FFFFFF" opacity="0.7"/>
+  <ellipse cx="170" cy="50" rx="10" ry="6" fill="#FFFFFF" opacity="0.7"/>
+</svg>
+
