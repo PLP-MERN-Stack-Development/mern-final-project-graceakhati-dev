@@ -3,6 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import courseRoutes from './routes/courseRoutes';
+import lessonRoutes from './routes/lessonRoutes';
+import assignmentRoutes from './routes/assignmentRoutes';
+import submissionRoutes from './routes/submissionRoutes';
+import certificateRoutes from './routes/certificateRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +50,10 @@ app.get('/health', (_req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/assignments', assignmentRoutes);
+app.use('/api/submissions', submissionRoutes);
+app.use('/api/certificates', certificateRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response): void => {
