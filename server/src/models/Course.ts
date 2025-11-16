@@ -1,18 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
 /**
- * Course Module Interface
- */
-export interface ICourseModule {
-  title: string;
-  description: string;
-  order: number;
-  duration?: number; // in minutes
-  videoUrl?: string;
-  content?: string;
-}
-
-/**
  * Course Impact Type
  */
 export type ImpactType = 'climate' | 'waste' | 'energy' | 'water' | 'community' | 'other';
@@ -25,7 +13,7 @@ export interface ICourse extends Document {
   slug: string;
   description: string;
   authorId: Types.ObjectId;
-  modules: ICourseModule[];
+  modules: Types.ObjectId[];
   tags: string[];
   price: number;
   impact_type: ImpactType;
@@ -33,42 +21,6 @@ export interface ICourse extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-
-/**
- * Course Schema
- */
-const courseModuleSchema = new Schema<ICourseModule>(
-  {
-    title: {
-      type: String,
-      required: [true, 'Module title is required'],
-      trim: true,
-    },
-    description: {
-      type: String,
-      required: [true, 'Module description is required'],
-      trim: true,
-    },
-    order: {
-      type: Number,
-      required: [true, 'Module order is required'],
-      min: [1, 'Module order must be at least 1'],
-    },
-    duration: {
-      type: Number,
-      min: [0, 'Duration cannot be negative'],
-    },
-    videoUrl: {
-      type: String,
-      trim: true,
-    },
-    content: {
-      type: String,
-      trim: true,
-    },
-  },
-  { _id: false }
-);
 
 const courseSchema = new Schema<ICourse>(
   {
@@ -98,16 +50,12 @@ const courseSchema = new Schema<ICourse>(
       ref: 'User',
       required: [true, 'Author ID is required'],
     },
-    modules: {
-      type: [courseModuleSchema],
-      default: [],
-      validate: {
-        validator: function (modules: ICourseModule[]) {
-          return modules.length > 0;
-        },
-        message: 'Course must have at least one module',
+    modules: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Module',
       },
-    },
+    ],
     tags: {
       type: [String],
       default: [],

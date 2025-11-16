@@ -83,17 +83,19 @@ export const getCourses = async (req: Request, res: Response): Promise<void> => 
 };
 
 /**
- * Get single course by ID or slug
+ * Get single course by ID
  * GET /api/courses/:id
  */
-export const getCourse = async (req: Request, res: Response): Promise<void> => {
+export const getCourseById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params as { id: string };
 
     // Try to find by ID first, then by slug
     const course = await Course.findOne({
       $or: [{ _id: id }, { slug: id }],
-    }).populate('authorId', 'name email role');
+    })
+      .populate('authorId', 'name email role')
+      .populate('modules');
 
     if (!course) {
       res.status(404).json({
@@ -158,15 +160,24 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
       title: string;
       slug?: string;
       description: string;
-      modules?: any[];
+      modules?: string[]; // Array of module ObjectIds
       tags?: string[];
       price?: number;
       impact_type?: string;
       status?: string;
     };
 
+    // Generate slug from title if not provided
+    let courseSlug = slug;
+    if (!courseSlug) {
+      courseSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
     // Check if slug already exists
-    const existingCourse = await Course.findOne({ slug });
+    const existingCourse = await Course.findOne({ slug: courseSlug });
     if (existingCourse) {
       res.status(400).json({
         success: false,
@@ -178,7 +189,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
     // Create new course
     const course = new Course({
       title,
-      slug,
+      slug: courseSlug,
       description,
       authorId: (req.user._id as any),
       modules: modules || [],

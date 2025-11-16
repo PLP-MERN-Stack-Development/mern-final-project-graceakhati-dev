@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param } from 'express-validator';
 import {
   getCourses,
-  getCourse,
+  getCourseById,
   createCourse,
   updateCourse,
   deleteCourse,
@@ -29,19 +29,9 @@ const createCourseValidation = [
     .isLength({ min: 10 })
     .withMessage('Description must be at least 10 characters'),
   body('modules')
-    .isArray({ min: 1 })
-    .withMessage('Course must have at least one module'),
-  body('modules.*.title')
-    .trim()
-    .notEmpty()
-    .withMessage('Module title is required'),
-  body('modules.*.description')
-    .trim()
-    .notEmpty()
-    .withMessage('Module description is required'),
-  body('modules.*.order')
-    .isInt({ min: 1 })
-    .withMessage('Module order must be a positive integer'),
+    .optional()
+    .isArray()
+    .withMessage('Modules must be an array of module IDs'),
   body('tags')
     .optional()
     .isArray({ max: 10 })
@@ -105,7 +95,7 @@ router.get('/', getCourses);
  * @desc    Get single course by ID or slug
  * @access  Public
  */
-router.get('/:id', getCourse);
+router.get('/:id', getCourseById);
 
 /**
  * @route   POST /api/courses
