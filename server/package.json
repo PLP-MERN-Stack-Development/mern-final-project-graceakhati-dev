@@ -1,25 +1,48 @@
 {
   "name": "planet-path-server",
   "version": "1.0.0",
-  "private": true,
-  "type": "module",
-  "main": "index.js",
+  "description": "Planet Path - Climate Action E-Learning Platform Backend",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "node --watch index.js",
-    "start": "node index.js",
-    "build": "echo 'No build step required for Node.js'",
-    "test": "echo 'No tests specified yet'",
-    "lint": "eslint . --ext js",
-    "format": "prettier --write \"**/*.{js,json,md}\""
+    "dev": "nodemon",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
   },
+  "keywords": [
+    "mern",
+    "express",
+    "typescript",
+    "mongodb",
+    "jwt",
+    "climate-action",
+    "e-learning"
+  ],
+  "author": "Grace Akhati",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
+    "mongoose": "^8.0.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
     "dotenv": "^16.3.1",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express-validator": "^7.0.1"
   },
   "devDependencies": {
-    "eslint": "^8.55.0",
-    "prettier": "^3.1.1"
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/cors": "^2.8.17",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "nodemon": "^3.0.2"
   }
 }
-

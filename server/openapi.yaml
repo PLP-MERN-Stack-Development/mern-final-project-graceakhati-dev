@@ -1,0 +1,679 @@
+openapi: 3.0.3
+info:
+  title: Planet Path API
+  description: RESTful API for Planet Path - An environmental education platform
+  version: 1.0.0
+  contact:
+    name: Planet Path API Support
+    email: support@planetpath.com
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Courses
+    description: Course management endpoints
+
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      description: Create a new user account and receive a JWT token
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+            example:
+              name: John Doe
+              email: john.doe@example.com
+              password: password123
+              role: student
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                success: true
+                message: User registered successfully
+                data:
+                  user:
+                    id: 507f1f77bcf86cd799439011
+                    name: John Doe
+                    email: john.doe@example.com
+                    role: student
+                    xp: 0
+                    badges: []
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Validation error or user already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Validation failed
+                errors:
+                  - field: email
+                    message: Please provide a valid email address
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      description: Authenticate user and receive a JWT token
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+            example:
+              email: john.doe@example.com
+              password: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                success: true
+                message: Login successful
+                data:
+                  user:
+                    id: 507f1f77bcf86cd799439011
+                    name: John Doe
+                    email: john.doe@example.com
+                    role: student
+                    xp: 100
+                    badges:
+                      - eco-warrior
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Invalid email or password
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/courses:
+    get:
+      tags:
+        - Courses
+      summary: Get all courses
+      description: Retrieve a paginated list of courses with optional filtering
+      operationId: getCourses
+      parameters:
+        - name: status
+          in: query
+          description: Filter by course status
+          required: false
+          schema:
+            type: string
+            enum: [draft, published, archived]
+            default: published
+        - name: impact_type
+          in: query
+          description: Filter by impact type
+          required: false
+          schema:
+            type: string
+            enum: [climate, waste, energy, water, community, other]
+        - name: tags
+          in: query
+          description: Filter by tags (can be multiple)
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: authorId
+          in: query
+          description: Filter by author ID
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Number of courses per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: sort
+          in: query
+          description: Sort field (prefix with - for descending)
+          required: false
+          schema:
+            type: string
+            default: -createdAt
+            example: -createdAt
+      responses:
+        '200':
+          description: List of courses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoursesListResponse'
+              example:
+                success: true
+                data:
+                  courses:
+                    - id: 507f1f77bcf86cd799439011
+                      title: Climate Change Basics
+                      slug: climate-change-basics
+                      description: Learn the fundamentals of climate change
+                      authorId:
+                        id: 507f191e810c19729de860ea
+                        name: Jane Instructor
+                        email: jane@example.com
+                        role: instructor
+                      modules:
+                        - title: Introduction
+                          description: Welcome to the course
+                          order: 1
+                          duration: 10
+                      tags:
+                        - climate
+                        - basics
+                      price: 0
+                      impact_type: climate
+                      status: published
+                      createdAt: '2024-01-01T00:00:00.000Z'
+                      updatedAt: '2024-01-01T00:00:00.000Z'
+                  pagination:
+                    page: 1
+                    limit: 10
+                    total: 1
+                    pages: 1
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Courses
+      summary: Create a new course
+      description: Create a new course (instructor/admin only)
+      operationId: createCourse
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseCreateInput'
+            example:
+              title: Climate Change Basics
+              description: Learn the fundamentals of climate change and its impact on our planet
+              modules:
+                - title: Introduction to Climate Change
+                  description: Understanding the basics
+                  order: 1
+                  duration: 15
+                  videoUrl: https://example.com/video1.mp4
+                - title: Causes and Effects
+                  description: Exploring the causes
+                  order: 2
+                  duration: 20
+              tags:
+                - climate
+                - environment
+                - basics
+              price: 0
+              impact_type: climate
+              status: draft
+      responses:
+        '201':
+          description: Course created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+              example:
+                success: true
+                message: Course created successfully
+                data:
+                  course:
+                    id: 507f1f77bcf86cd799439011
+                    title: Climate Change Basics
+                    slug: climate-change-basics
+                    description: Learn the fundamentals of climate change
+                    authorId:
+                      id: 507f191e810c19729de860ea
+                      name: Jane Instructor
+                      email: jane@example.com
+                      role: instructor
+                    modules:
+                      - title: Introduction to Climate Change
+                        description: Understanding the basics
+                        order: 1
+                        duration: 15
+                    tags:
+                      - climate
+                    price: 0
+                    impact_type: climate
+                    status: draft
+                    createdAt: '2024-01-01T00:00:00.000Z'
+                    updatedAt: '2024-01-01T00:00:00.000Z'
+        '400':
+          description: Validation error or slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Validation failed
+                errors:
+                  - field: title
+                    message: Title must be between 3 and 200 characters
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: User not authenticated
+        '403':
+          description: Forbidden - User does not have required role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Access denied. Instructor or admin role required
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or register endpoint
+
+  schemas:
+    UserRegister:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: User's full name
+          example: John Doe
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: john.doe@example.com
+        password:
+          type: string
+          minLength: 6
+          format: password
+          description: User's password (minimum 6 characters)
+          example: password123
+        role:
+          type: string
+          enum: [student, instructor, admin]
+          default: student
+          description: User's role
+          example: student
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: john.doe@example.com
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: password123
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User ID
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+          description: User's full name
+          example: John Doe
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: john.doe@example.com
+        role:
+          type: string
+          enum: [student, instructor, admin]
+          description: User's role
+          example: student
+        xp:
+          type: integer
+          minimum: 0
+          description: User's experience points
+          example: 100
+        badges:
+          type: array
+          items:
+            type: string
+          description: User's badges
+          example:
+            - eco-warrior
+            - climate-champion
+
+    CourseModule:
+      type: object
+      required:
+        - title
+        - description
+        - order
+      properties:
+        title:
+          type: string
+          description: Module title
+          example: Introduction to Climate Change
+        description:
+          type: string
+          description: Module description
+          example: Understanding the basics of climate change
+        order:
+          type: integer
+          minimum: 1
+          description: Module order in the course
+          example: 1
+        duration:
+          type: integer
+          minimum: 0
+          description: Module duration in minutes
+          example: 15
+        videoUrl:
+          type: string
+          format: uri
+          description: URL to module video
+          example: https://example.com/video1.mp4
+        content:
+          type: string
+          description: Module content/text
+          example: This module covers the fundamental concepts...
+
+    CourseCreateInput:
+      type: object
+      required:
+        - title
+        - description
+        - modules
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+          description: Course title
+          example: Climate Change Basics
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: URL-friendly course identifier (auto-generated if not provided)
+          example: climate-change-basics
+        description:
+          type: string
+          minLength: 10
+          description: Course description
+          example: Learn the fundamentals of climate change and its impact on our planet
+        modules:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CourseModule'
+          description: Course modules
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+          description: Course tags
+          example:
+            - climate
+            - environment
+            - basics
+        price:
+          type: number
+          minimum: 0
+          default: 0
+          description: Course price
+          example: 0
+        impact_type:
+          type: string
+          enum: [climate, waste, energy, water, community, other]
+          default: climate
+          description: Type of environmental impact
+          example: climate
+        status:
+          type: string
+          enum: [draft, published, archived]
+          default: draft
+          description: Course status
+          example: draft
+
+    CourseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Course ID
+          example: 507f1f77bcf86cd799439011
+        title:
+          type: string
+          description: Course title
+          example: Climate Change Basics
+        slug:
+          type: string
+          description: URL-friendly course identifier
+          example: climate-change-basics
+        description:
+          type: string
+          description: Course description
+          example: Learn the fundamentals of climate change
+        authorId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/UserResponse'
+          description: Course author (populated with user details when fetched)
+          example:
+            id: 507f191e810c19729de860ea
+            name: Jane Instructor
+            email: jane@example.com
+            role: instructor
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseModule'
+          description: Course modules
+        tags:
+          type: array
+          items:
+            type: string
+          description: Course tags
+          example:
+            - climate
+            - environment
+        price:
+          type: number
+          minimum: 0
+          description: Course price
+          example: 0
+        impact_type:
+          type: string
+          enum: [climate, waste, energy, water, community, other]
+          description: Type of environmental impact
+          example: climate
+        status:
+          type: string
+          enum: [draft, published, archived]
+          description: Course status
+          example: published
+        createdAt:
+          type: string
+          format: date-time
+          description: Course creation timestamp
+          example: '2024-01-01T00:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Course last update timestamp
+          example: '2024-01-01T00:00:00.000Z'
+
+    CoursesListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            courses:
+              type: array
+              items:
+                $ref: '#/components/schemas/CourseResponse'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  description: Current page number
+                  example: 1
+                limit:
+                  type: integer
+                  description: Number of items per page
+                  example: 10
+                total:
+                  type: integer
+                  description: Total number of courses
+                  example: 1
+                pages:
+                  type: integer
+                  description: Total number of pages
+                  example: 1
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: User registered successfully
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/UserResponse'
+            token:
+              type: string
+              description: JWT authentication token
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+          example: Validation failed
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field name with error
+                example: email
+              message:
+                type: string
+                description: Error message
+                example: Please provide a valid email address
+          description: Array of validation errors (only present for validation errors)
+        error:
+          type: string
+          description: Detailed error message (only in development mode)
+          example: Detailed error message here
+
