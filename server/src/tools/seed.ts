@@ -147,7 +147,7 @@ const createCourses = async (instructorId: mongoose.Types.ObjectId): Promise<any
       });
 
       // Update module with lessons
-      module1_1.lessons = [lesson1_1_1._id, lesson1_1_2._id];
+      module1_1.lessons = [lesson1_1_1._id as mongoose.Types.ObjectId, lesson1_1_2._id as mongoose.Types.ObjectId];
       await module1_1.save();
 
       // Module 1.2: Impacts
@@ -167,11 +167,11 @@ const createCourses = async (instructorId: mongoose.Types.ObjectId): Promise<any
         moduleId: module1_2._id,
       });
 
-      module1_2.lessons = [lesson1_2_1._id];
+      module1_2.lessons = [lesson1_2_1._id as mongoose.Types.ObjectId];
       await module1_2.save();
 
       // Update course with modules
-      course1.modules = [module1_1._id, module1_2._id];
+      course1.modules = [module1_1._id as mongoose.Types.ObjectId, module1_2._id as mongoose.Types.ObjectId];
       await course1.save();
 
       courses.push(course1);
@@ -213,7 +213,7 @@ const createCourses = async (instructorId: mongoose.Types.ObjectId): Promise<any
         moduleId: module2_1._id,
       });
 
-      module2_1.lessons = [lesson2_1_1._id];
+      module2_1.lessons = [lesson2_1_1._id as mongoose.Types.ObjectId];
       await module2_1.save();
 
       // Module 2.2: Recycle
@@ -233,10 +233,10 @@ const createCourses = async (instructorId: mongoose.Types.ObjectId): Promise<any
         moduleId: module2_2._id,
       });
 
-      module2_2.lessons = [lesson2_2_1._id];
+      module2_2.lessons = [lesson2_2_1._id as mongoose.Types.ObjectId];
       await module2_2.save();
 
-      course2.modules = [module2_1._id, module2_2._id];
+      course2.modules = [module2_1._id as mongoose.Types.ObjectId, module2_2._id as mongoose.Types.ObjectId];
       await course2.save();
 
       courses.push(course2);
@@ -278,7 +278,7 @@ const createCourses = async (instructorId: mongoose.Types.ObjectId): Promise<any
         moduleId: module3_1._id,
       });
 
-      module3_1.lessons = [lesson3_1_1._id];
+      module3_1.lessons = [lesson3_1_1._id as mongoose.Types.ObjectId];
       await module3_1.save();
 
       // Module 3.2: Wind Energy
@@ -298,10 +298,10 @@ const createCourses = async (instructorId: mongoose.Types.ObjectId): Promise<any
         moduleId: module3_2._id,
       });
 
-      module3_2.lessons = [lesson3_2_1._id];
+      module3_2.lessons = [lesson3_2_1._id as mongoose.Types.ObjectId];
       await module3_2.save();
 
-      course3.modules = [module3_1._id, module3_2._id];
+      course3.modules = [module3_1._id as mongoose.Types.ObjectId, module3_2._id as mongoose.Types.ObjectId];
       await course3.save();
 
       courses.push(course3);
@@ -404,7 +404,7 @@ const seed = async (): Promise<void> => {
     await clearDatabase();
 
     // Create users
-    const { admin, instructor } = await createUsers();
+    const { instructor } = await createUsers();
     console.log('');
 
     // Create courses with modules and lessons
@@ -412,7 +412,7 @@ const seed = async (): Promise<void> => {
     console.log('');
 
     // Create assignments
-    const assignments = await createAssignments(courses);
+    await createAssignments(courses);
     console.log('');
 
     // Summary

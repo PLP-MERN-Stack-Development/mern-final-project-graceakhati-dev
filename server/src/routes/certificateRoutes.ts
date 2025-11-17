@@ -5,6 +5,10 @@ import {
   getUserCertificates,
   getCourseCertificates,
 } from '../controllers/certificate.controller';
+import {
+  generateCertificate as generateCertificateNew,
+  verifyCertificate,
+} from '../controllers/certificateController';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -14,14 +18,15 @@ const router = Router();
  * @desc    Generate a certificate for user and course
  * @access  Private
  */
-router.post('/generate', authenticate, generateCertificate);
+router.post('/generate', authenticate, generateCertificateNew);
 
 /**
- * @route   GET /api/certificates/:id
- * @desc    Get certificate by ID
- * @access  Private
+ * @route   GET /api/certificates/verify/:certificateId
+ * @desc    Verify a certificate by certificateId
+ * @access  Public
+ * NOTE: This route must come before /:id to avoid route conflicts
  */
-router.get('/:id', authenticate, getCertificate);
+router.get('/verify/:certificateId', verifyCertificate);
 
 /**
  * @route   GET /api/certificates/user/:userId
@@ -41,6 +46,14 @@ router.get(
   authorize('instructor', 'admin'),
   getCourseCertificates
 );
+
+/**
+ * @route   GET /api/certificates/:id
+ * @desc    Get certificate by ID
+ * @access  Private
+ * NOTE: This route must come last to avoid conflicts with /verify/:certificateId
+ */
+router.get('/:id', authenticate, getCertificate);
 
 export default router;
 

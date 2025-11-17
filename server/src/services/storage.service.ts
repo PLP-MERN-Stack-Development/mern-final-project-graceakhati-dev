@@ -33,7 +33,7 @@ interface S3Config {
 /**
  * Check if S3 is configured
  */
-const isS3Configured = (): boolean => {
+export const isS3Configured = (): boolean => {
   return !!(
     process.env.AWS_ACCESS_KEY_ID &&
     process.env.AWS_SECRET_ACCESS_KEY &&

@@ -1,14 +1,21 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { UserRole } from '@/context/AuthContext';
+import { useAuthService } from '@/hooks/useAuthService';
+import { useAuthStore } from '@/store/useAuthStore';
 import ImageLoader from '@/components/ImageLoader';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { uiIllustrations } from '@/utils/imagePaths';
 
+type UserRole = 'student' | 'instructor' | 'admin';
+
+/**
+ * Signup Page Component
+ * Handles user registration with email/password or Google OAuth
+ */
 function SignupPage() {
   const navigate = useNavigate();
-  const { signup, signupWithGoogle, user, isAuthenticated } = useAuth();
+  const { signup, loginWithGoogle, isLoading, error: authError } = useAuthService();
+  const { user, isAuthenticated } = useAuthStore();
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
   /**
@@ -16,18 +23,19 @@ function SignupPage() {
    */
   useEffect(() => {
     if (shouldRedirect && isAuthenticated && user) {
+      // Redirect based on user role
       switch (user.role) {
         case 'student':
-          navigate('/student/dashboard');
+          navigate('/student/dashboard', { replace: true });
           break;
         case 'instructor':
-          navigate('/instructor/dashboard');
+          navigate('/instructor/dashboard', { replace: true });
           break;
         case 'admin':
-          navigate('/admin/dashboard');
+          navigate('/admin/dashboard', { replace: true });
           break;
         default:
-          navigate('/student/dashboard');
+          navigate('/student/dashboard', { replace: true });
       }
       setShouldRedirect(false);
     }
@@ -68,6 +76,13 @@ function SignupPage() {
       setErrors((prev) => ({
         ...prev,
         [name]: undefined,
+      }));
+    }
+    // Clear general error when user starts typing
+    if (errors.general) {
+      setErrors((prev) => ({
+        ...prev,
+        general: undefined,
       }));
     }
   };
@@ -129,21 +144,22 @@ function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      // Call signup function from auth context
-      await signup({
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        role: formData.role,
-      });
+      // Call signup function from auth service
+      // JWT is automatically stored in localStorage by useAuthService via useAuthStore
+      await signup(
+        formData.fullName.trim(),
+        formData.email.trim(),
+        formData.password,
+        formData.role
+      );
 
       // Set flag to trigger redirect via useEffect
       setShouldRedirect(true);
-    } catch (error) {
+    } catch (error: any) {
       // Handle signup errors
+      const errorMessage = error.message || 'Signup failed. Please try again.';
       setErrors({
-        general: error instanceof Error ? error.message : 'Signup failed. Please try again.',
+        general: errorMessage,
       });
       setIsSubmitting(false);
     }
@@ -154,17 +170,28 @@ function SignupPage() {
    */
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
+    setErrors({});
     try {
-      await signupWithGoogle();
+      await loginWithGoogle();
       // Set flag to trigger redirect via useEffect
       setShouldRedirect(true);
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error.message || 'Google signup failed. Please try again.';
       setErrors({
-        general: error instanceof Error ? error.message : 'Google signup failed. Please try again.',
+        general: errorMessage,
       });
       setIsGoogleLoading(false);
     }
   };
+
+  // Show auth error if present
+  useEffect(() => {
+    if (authError) {
+      setErrors({
+        general: authError,
+      });
+    }
+  }, [authError]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-light-sand via-soft-white to-light-sand">
@@ -209,8 +236,8 @@ function SignupPage() {
               <GoogleLoginButton
                 text="Sign up with Google"
                 onClick={handleGoogleSignup}
-                disabled={isSubmitting}
-                isLoading={isGoogleLoading}
+                disabled={isSubmitting || isLoading}
+                isLoading={isGoogleLoading || isLoading}
               />
             </div>
 
@@ -245,7 +272,8 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your full name"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  required
                 />
                 {errors.fullName && (
                   <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
@@ -272,7 +300,8 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your email"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  required
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">{errors.email}</p>
@@ -299,7 +328,8 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Create a password"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  required
                 />
                 {errors.password && (
                   <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -326,7 +356,8 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Confirm your password"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  required
                 />
                 {errors.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
@@ -347,7 +378,7 @@ function SignupPage() {
                   value={formData.role}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border-2 border-leaf-green/40 rounded-lg focus:outline-none focus:border-leaf-green focus:ring-2 focus:ring-leaf-green/20 transition-all duration-200 bg-white hover:border-leaf-green/60"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
                 >
                   <option value="student">Student</option>
                   <option value="instructor">Instructor</option>
@@ -358,14 +389,14 @@ function SignupPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || isGoogleLoading}
+                disabled={isSubmitting || isLoading || isGoogleLoading}
                 className={`w-full px-6 py-4 bg-forest-green text-soft-white rounded-lg font-playful text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl ${
-                  isSubmitting || isGoogleLoading
+                  isSubmitting || isLoading || isGoogleLoading
                     ? 'opacity-50 cursor-not-allowed hover:scale-100'
                     : 'hover:bg-forest-green/90 hover:shadow-2xl animate-motion-subtle'
                 }`}
               >
-                {isSubmitting ? (
+                {isSubmitting || isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg
                       className="animate-spin h-5 w-5"
@@ -425,4 +456,3 @@ function SignupPage() {
 }
 
 export default SignupPage;
-

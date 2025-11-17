@@ -2,11 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback, StorageEngine } from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { AuthRequest } from './auth';
 
 /**
  * Extended Request interface with file properties
  */
-export interface UploadRequest extends Request {
+export interface UploadRequest extends AuthRequest {
   files?: Express.Multer.File[];
   file?: Express.Multer.File;
 }
