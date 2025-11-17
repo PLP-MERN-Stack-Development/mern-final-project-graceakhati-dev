@@ -28,6 +28,9 @@ export interface ISubmission extends Document {
   score: number | null;
   feedback: string;
   status: 'submitted' | 'graded' | 'rejected';
+  aiScore: number;
+  verified: boolean;
+  verifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -114,6 +117,20 @@ const submissionSchema = new Schema<ISubmission>(
       type: String,
       enum: ['submitted', 'graded', 'rejected'],
       default: 'submitted',
+    },
+    aiScore: {
+      type: Number,
+      default: 0,
+      min: [0, 'AI Score cannot be negative'],
+      max: [100, 'AI Score cannot exceed 100'],
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

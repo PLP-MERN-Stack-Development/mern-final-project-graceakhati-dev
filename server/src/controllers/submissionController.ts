@@ -1,5 +1,9 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
+import { UploadRequest, getUploadedFiles } from '../middleware/upload.middleware';
+import { storeFilesFromRequest } from '../services/storage.service';
+import { scoreSubmission } from '../services/verificationService';
+import { dispatchEvent } from '../worker/badgeWorker';
 import Submission from '../models/Submission';
 import Assignment from '../models/Assignment';
 
@@ -7,8 +11,13 @@ import Assignment from '../models/Assignment';
  * Submit an assignment
  * POST /api/submissions
  * Supports multipart/form-data for file uploads
+ * Expected fields:
+ * - assignmentId (string)
+ * - courseId (string)
+ * - files (array of files)
+ * - metadata (JSON string with geotag and notes)
  */
-export const submitAssignment = async (req: AuthRequest, res: Response): Promise<void> => {
+export const submitAssignment = async (req: UploadRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({
@@ -18,20 +27,19 @@ export const submitAssignment = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const {
-      assignmentId,
-      courseId,
-      files,
-      metadata,
-    } = req.body as {
+    const { assignmentId, courseId, metadata } = req.body as {
       assignmentId: string;
       courseId: string;
-      files?: string[];
-      metadata?: {
-        geotag?: { lat: number; lng: number };
-        notes?: string;
-      };
+      metadata?: string;
     };
+
+    if (!assignmentId || !courseId) {
+      res.status(400).json({
+        success: false,
+        message: 'Assignment ID and Course ID are required',
+      });
+      return;
+    }
 
     // Verify assignment exists
     const assignment = await Assignment.findById(assignmentId);
@@ -57,16 +65,68 @@ export const submitAssignment = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
+    // Parse metadata if provided
+    let parsedMetadata: { geotag?: { lat: number; lng: number }; notes?: string } = {};
+    if (metadata) {
+      try {
+        parsedMetadata = JSON.parse(metadata);
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid metadata format. Must be valid JSON',
+        });
+        return;
+      }
+    }
+
+    // Store uploaded files
+    const fileUrls: string[] = [];
+    const uploadedFiles = getUploadedFiles(req);
+    
+    if (uploadedFiles.length > 0) {
+      const urls = await storeFilesFromRequest(req);
+      fileUrls.push(...urls);
+    }
+
+    // Score submission using verification service
+    const { aiScore, verified } = await scoreSubmission({
+      imageUrl: fileUrls.length > 0 ? fileUrls : undefined,
+      geotag: parsedMetadata.geotag,
+      description: parsedMetadata.notes,
+    });
+
+    // Create submission
     const submission = new Submission({
       assignmentId,
       courseId,
       userId: req.user._id,
-      files: files || [],
-      metadata: metadata || {},
+      files: fileUrls,
+      metadata: parsedMetadata,
       status: 'submitted',
+      aiScore,
+      verified,
+      verifiedAt: verified ? new Date() : null,
     });
 
     await submission.save();
+    await submission.populate('assignmentId', 'title description');
+    await submission.populate('userId', 'name email');
+    await submission.populate('courseId', 'title slug');
+
+    // Dispatch project_verified event if verified (aiScore > 60)
+    if (verified && req.user._id) {
+      try {
+        await dispatchEvent('project_verified', {
+          userId: req.user._id.toString(),
+          submissionId: submission._id.toString(),
+          courseId: courseId,
+          aiScore,
+        });
+      } catch (eventError) {
+        // Log error but don't fail the submission
+        console.error('Failed to dispatch project_verified event:', eventError);
+      }
+    }
 
     res.status(201).json({
       success: true,

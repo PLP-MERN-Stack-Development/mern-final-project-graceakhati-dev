@@ -1,23 +1,58 @@
 openapi: 3.0.3
 info:
   title: Planet Path API
-  description: RESTful API for Planet Path - An environmental education platform
+  description: |
+    RESTful API for Planet Path - An environmental education platform
+    
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-token>
+    ```
+    
+    ## File Uploads
+    Some endpoints accept multipart/form-data for file uploads. Files are stored in S3 (if configured) or locally.
+    
+    ## Rate Limiting
+    API requests are rate-limited. Check response headers for rate limit information.
   version: 1.0.0
   contact:
     name: Planet Path API Support
     email: support@planetpath.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
   - url: http://localhost:5000
     description: Development server
+  - url: https://api.planetpath.com
+    description: Production server
 
 tags:
   - name: Auth
-    description: Authentication endpoints
+    description: Authentication and user management
   - name: Courses
-    description: Course management endpoints
+    description: Course management (CRUD operations)
+  - name: Modules
+    description: Course module management
+  - name: Lessons
+    description: Lesson management
+  - name: Quizzes
+    description: Quiz management
+  - name: Assignments
+    description: Assignment management
+  - name: Submissions
+    description: Assignment submission management
+  - name: Enrollments
+    description: Course enrollment management
+  - name: Leaderboard
+    description: User leaderboard and XP management
+  - name: Certificates
+    description: Certificate generation and management
 
 paths:
+  # ==================== AUTH ENDPOINTS ====================
   /api/auth/register:
     post:
       tags:
@@ -48,7 +83,7 @@ paths:
                 message: User registered successfully
                 data:
                   user:
-                    id: 507f1f77bcf86cd799439011
+                    _id: 507f1f77bcf86cd799439011
                     name: John Doe
                     email: john.doe@example.com
                     role: student
@@ -56,23 +91,9 @@ paths:
                     badges: []
                   token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         '400':
-          description: Validation error or user already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                message: Validation failed
-                errors:
-                  - field: email
-                    message: Please provide a valid email address
+          $ref: '#/components/responses/ValidationError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/ServerError'
 
   /api/auth/login:
     post:
@@ -97,41 +118,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
-              example:
-                success: true
-                message: Login successful
-                data:
-                  user:
-                    id: 507f1f77bcf86cd799439011
-                    name: John Doe
-                    email: john.doe@example.com
-                    role: student
-                    xp: 100
-                    badges:
-                      - eco-warrior
-                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                message: Invalid email or password
+          $ref: '#/components/responses/Unauthorized'
         '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/ValidationError'
         '500':
-          description: Server error
+          $ref: '#/components/responses/ServerError'
+
+  /api/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get current user profile
+      description: Retrieve the authenticated user's profile information
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
+  # ==================== COURSES ENDPOINTS ====================
   /api/courses:
     get:
       tags:
@@ -142,45 +160,33 @@ paths:
       parameters:
         - name: status
           in: query
-          description: Filter by course status
-          required: false
           schema:
             type: string
             enum: [draft, published, archived]
             default: published
         - name: impact_type
           in: query
-          description: Filter by impact type
-          required: false
           schema:
             type: string
             enum: [climate, waste, energy, water, community, other]
         - name: tags
           in: query
-          description: Filter by tags (can be multiple)
-          required: false
           schema:
             type: array
             items:
               type: string
         - name: authorId
           in: query
-          description: Filter by author ID
-          required: false
           schema:
             type: string
         - name: page
           in: query
-          description: Page number
-          required: false
           schema:
             type: integer
             default: 1
             minimum: 1
         - name: limit
           in: query
-          description: Number of courses per page
-          required: false
           schema:
             type: integer
             default: 10
@@ -188,12 +194,9 @@ paths:
             maximum: 100
         - name: sort
           in: query
-          description: Sort field (prefix with - for descending)
-          required: false
           schema:
             type: string
             default: -createdAt
-            example: -createdAt
       responses:
         '200':
           description: List of courses retrieved successfully
@@ -201,43 +204,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CoursesListResponse'
-              example:
-                success: true
-                data:
-                  courses:
-                    - id: 507f1f77bcf86cd799439011
-                      title: Climate Change Basics
-                      slug: climate-change-basics
-                      description: Learn the fundamentals of climate change
-                      authorId:
-                        id: 507f191e810c19729de860ea
-                        name: Jane Instructor
-                        email: jane@example.com
-                        role: instructor
-                      modules:
-                        - title: Introduction
-                          description: Welcome to the course
-                          order: 1
-                          duration: 10
-                      tags:
-                        - climate
-                        - basics
-                      price: 0
-                      impact_type: climate
-                      status: published
-                      createdAt: '2024-01-01T00:00:00.000Z'
-                      updatedAt: '2024-01-01T00:00:00.000Z'
-                  pagination:
-                    page: 1
-                    limit: 10
-                    total: 1
-                    pages: 1
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/ServerError'
 
     post:
       tags:
@@ -253,26 +221,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CourseCreateInput'
-            example:
-              title: Climate Change Basics
-              description: Learn the fundamentals of climate change and its impact on our planet
-              modules:
-                - title: Introduction to Climate Change
-                  description: Understanding the basics
-                  order: 1
-                  duration: 15
-                  videoUrl: https://example.com/video1.mp4
-                - title: Causes and Effects
-                  description: Exploring the causes
-                  order: 2
-                  duration: 20
-              tags:
-                - climate
-                - environment
-                - basics
-              price: 0
-              impact_type: climate
-              status: draft
       responses:
         '201':
           description: Course created successfully
@@ -280,68 +228,1247 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CourseResponse'
-              example:
-                success: true
-                message: Course created successfully
-                data:
-                  course:
-                    id: 507f1f77bcf86cd799439011
-                    title: Climate Change Basics
-                    slug: climate-change-basics
-                    description: Learn the fundamentals of climate change
-                    authorId:
-                      id: 507f191e810c19729de860ea
-                      name: Jane Instructor
-                      email: jane@example.com
-                      role: instructor
-                    modules:
-                      - title: Introduction to Climate Change
-                        description: Understanding the basics
-                        order: 1
-                        duration: 15
-                    tags:
-                      - climate
-                    price: 0
-                    impact_type: climate
-                    status: draft
-                    createdAt: '2024-01-01T00:00:00.000Z'
-                    updatedAt: '2024-01-01T00:00:00.000Z'
         '400':
-          description: Validation error or slug already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                message: Validation failed
-                errors:
-                  - field: title
-                    message: Title must be between 3 and 200 characters
+          $ref: '#/components/responses/ValidationError'
         '401':
-          description: Unauthorized - Missing or invalid token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                message: User not authenticated
+          $ref: '#/components/responses/Unauthorized'
         '403':
-          description: Forbidden - User does not have required role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                success: false
-                message: Access denied. Instructor or admin role required
+          $ref: '#/components/responses/Forbidden'
         '500':
-          description: Server error
+          $ref: '#/components/responses/ServerError'
+
+  /api/courses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get course by ID or slug
+      description: Retrieve a single course by its ID or slug
+      operationId: getCourseById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Course ID or slug
+      responses:
+        '200':
+          description: Course retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CourseResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Courses
+      summary: Update a course
+      description: Update an existing course (author or admin only)
+      operationId: updateCourse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseUpdateInput'
+      responses:
+        '200':
+          description: Course updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Courses
+      summary: Delete a course
+      description: Delete a course (author or admin only)
+      operationId: deleteCourse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Course deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # ==================== MODULES ENDPOINTS ====================
+  /api/modules:
+    post:
+      tags:
+        - Modules
+      summary: Create a new module
+      description: Create a new course module (instructor/admin only)
+      operationId: createModule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleCreateInput'
+      responses:
+        '201':
+          description: Module created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ModuleResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/modules/course/{courseId}:
+    get:
+      tags:
+        - Modules
+      summary: Get modules by course
+      description: Retrieve all modules for a specific course
+      operationId: getModulesByCourse
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modules retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      modules:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ModuleResponse'
+                      count:
+                        type: integer
+
+  /api/modules/{id}:
+    get:
+      tags:
+        - Modules
+      summary: Get module by ID
+      operationId: getModuleById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Module retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ModuleResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Modules
+      summary: Update a module
+      operationId: updateModule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleUpdateInput'
+      responses:
+        '200':
+          description: Module updated successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Modules
+      summary: Delete a module
+      operationId: deleteModule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Module deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== LESSONS ENDPOINTS ====================
+  /api/lessons:
+    post:
+      tags:
+        - Lessons
+      summary: Create a new lesson
+      description: Create a new lesson (instructor/admin only)
+      operationId: createLesson
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LessonCreateInput'
+      responses:
+        '201':
+          description: Lesson created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/LessonResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/lessons/module/{moduleId}:
+    get:
+      tags:
+        - Lessons
+      summary: Get lessons by module
+      description: Retrieve all lessons for a specific module
+      operationId: getLessonsByModule
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lessons retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      lessons:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LessonResponse'
+                      count:
+                        type: integer
+
+  /api/lessons/{id}:
+    put:
+      tags:
+        - Lessons
+      summary: Update a lesson
+      operationId: updateLesson
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LessonUpdateInput'
+      responses:
+        '200':
+          description: Lesson updated successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Lessons
+      summary: Delete a lesson
+      operationId: deleteLesson
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lesson deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== QUIZZES ENDPOINTS ====================
+  /api/quizzes:
+    post:
+      tags:
+        - Quizzes
+      summary: Create a new quiz
+      description: Create a new quiz for a lesson (instructor/admin only)
+      operationId: createQuiz
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizCreateInput'
+      responses:
+        '201':
+          description: Quiz created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/QuizResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/quizzes/{id}:
+    get:
+      tags:
+        - Quizzes
+      summary: Get quiz by ID
+      operationId: getQuizById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/QuizResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Quizzes
+      summary: Update a quiz
+      operationId: updateQuiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizUpdateInput'
+      responses:
+        '200':
+          description: Quiz updated successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Quizzes
+      summary: Delete a quiz
+      operationId: deleteQuiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/quizzes/lesson/{lessonId}:
+    get:
+      tags:
+        - Quizzes
+      summary: Get quiz by lesson ID
+      operationId: getQuizByLesson
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/QuizResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== ASSIGNMENTS ENDPOINTS ====================
+  /api/assignments:
+    post:
+      tags:
+        - Assignments
+      summary: Create a new assignment
+      description: Create a new assignment (instructor/admin only)
+      operationId: createAssignment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentCreateInput'
+      responses:
+        '201':
+          description: Assignment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AssignmentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/assignments/course/{courseId}:
+    get:
+      tags:
+        - Assignments
+      summary: List assignments by course
+      description: Retrieve all assignments for a specific course
+      operationId: listAssignmentsByCourse
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assignments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      assignments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AssignmentResponse'
+                      count:
+                        type: integer
+
+  /api/assignments/{id}:
+    get:
+      tags:
+        - Assignments
+      summary: Get assignment by ID
+      operationId: getAssignment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assignment retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AssignmentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Assignments
+      summary: Update an assignment
+      operationId: updateAssignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentUpdateInput'
+      responses:
+        '200':
+          description: Assignment updated successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Assignments
+      summary: Delete an assignment
+      operationId: deleteAssignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assignment deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== SUBMISSIONS ENDPOINTS ====================
+  /api/submissions:
+    post:
+      tags:
+        - Submissions
+      summary: Submit an assignment
+      description: Submit an assignment with files (multipart/form-data)
+      operationId: submitAssignment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - assignmentId
+                - courseId
+              properties:
+                assignmentId:
+                  type: string
+                  description: Assignment ID
+                courseId:
+                  type: string
+                  description: Course ID
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Array of files to upload
+                metadata:
+                  type: string
+                  description: JSON string with geotag and notes
+                  example: '{"geotag":{"lat":40.7128,"lng":-74.0060},"notes":"Completed at Central Park"}'
+            encoding:
+              files:
+                contentType: image/*,video/*,application/pdf
+      responses:
+        '201':
+          description: Assignment submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubmissionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/submissions/assignment/{assignmentId}:
+    get:
+      tags:
+        - Submissions
+      summary: List submissions by assignment
+      description: Get all submissions for an assignment (instructor/admin only)
+      operationId: listSubmissionsByAssignment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Submissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      submissions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SubmissionResponse'
+                      count:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/submissions/{id}:
+    get:
+      tags:
+        - Submissions
+      summary: Get submission by ID
+      operationId: getSubmissionById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Submission retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubmissionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/submissions/{id}/grade:
+    put:
+      tags:
+        - Submissions
+      summary: Grade a submission
+      description: Grade a submission (instructor/admin only)
+      operationId: gradeSubmission
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - score
+              properties:
+                score:
+                  type: number
+                  minimum: 0
+                  description: Score out of maxScore
+                feedback:
+                  type: string
+                  description: Feedback for the student
+                status:
+                  type: string
+                  enum: [graded, rejected]
+                  default: graded
+      responses:
+        '200':
+          description: Submission graded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubmissionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== ENROLLMENTS ENDPOINTS ====================
+  /api/enrollments:
+    post:
+      tags:
+        - Enrollments
+      summary: Enroll in a course
+      description: Enroll the authenticated user in a course
+      operationId: enrollInCourse
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - courseId
+              properties:
+                courseId:
+                  type: string
+                  description: Course ID to enroll in
+      responses:
+        '201':
+          description: Enrolled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/enrollments/user/{userId}:
+    get:
+      tags:
+        - Enrollments
+      summary: Get user enrollments
+      description: Get all enrollments for a specific user
+      operationId: getUserEnrollments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollments retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      enrollments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/EnrollmentResponse'
+                      count:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/enrollments/course/{courseId}:
+    get:
+      tags:
+        - Enrollments
+      summary: Get course enrollments
+      description: Get all enrollments for a course (instructor/admin only)
+      operationId: getCourseEnrollments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollments retrieved successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/enrollments/{id}/progress:
+    put:
+      tags:
+        - Enrollments
+      summary: Update enrollment progress
+      operationId: updateEnrollmentProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                progress:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  description: Progress percentage (0-100)
+                status:
+                  type: string
+                  enum: [active, completed, dropped]
+      responses:
+        '200':
+          description: Progress updated successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/enrollments/{id}:
+    delete:
+      tags:
+        - Enrollments
+      summary: Drop enrollment
+      operationId: dropEnrollment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollment dropped successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== LEADERBOARD ENDPOINTS ====================
+  /api/leaderboard/xp:
+    post:
+      tags:
+        - Leaderboard
+      summary: Add XP to user
+      description: Add experience points to a user's leaderboard score
+      operationId: addUserXp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - xp
+              properties:
+                userId:
+                  type: string
+                  description: User ID (defaults to authenticated user)
+                xp:
+                  type: number
+                  description: XP points to add (can be negative)
+      responses:
+        '200':
+          description: XP added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      xpAdded:
+                        type: number
+                      newScore:
+                        type: number
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/leaderboard/top:
+    get:
+      tags:
+        - Leaderboard
+      summary: Get top users
+      description: Get top N users from leaderboard
+      operationId: getTopLeaderboard
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Top users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LeaderboardUser'
+                      count:
+                        type: integer
+
+  /api/leaderboard/rank/{userId}:
+    get:
+      tags:
+        - Leaderboard
+      summary: Get user rank
+      description: Get a user's rank and score
+      operationId: getUserLeaderboardRank
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User rank retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/LeaderboardUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/leaderboard/range:
+    get:
+      tags:
+        - Leaderboard
+      summary: Get users by rank range
+      description: Get users within a rank range (for pagination)
+      operationId: getLeaderboardRange
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Starting rank (1-based)
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Ending rank (1-based, inclusive)
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/LeaderboardUser'
+                      startRank:
+                        type: integer
+                      endRank:
+                        type: integer
+                      count:
+                        type: integer
+
+  # ==================== CERTIFICATES ENDPOINTS ====================
+  /api/certificates/generate:
+    post:
+      tags:
+        - Certificates
+      summary: Generate certificate
+      description: Generate a PDF certificate for course completion
+      operationId: generateCertificate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - courseId
+              properties:
+                userId:
+                  type: string
+                  description: User ID
+                courseId:
+                  type: string
+                  description: Course ID
+      responses:
+        '201':
+          description: Certificate generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CertificateResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
 components:
   securitySchemes:
@@ -363,24 +1490,20 @@ components:
           type: string
           minLength: 2
           maxLength: 100
-          description: User's full name
           example: John Doe
         email:
           type: string
           format: email
-          description: User's email address
           example: john.doe@example.com
         password:
           type: string
           minLength: 6
           format: password
-          description: User's password (minimum 6 characters)
           example: password123
         role:
           type: string
           enum: [student, instructor, admin]
           default: student
-          description: User's role
           example: student
 
     UserLogin:
@@ -392,242 +1515,38 @@ components:
         email:
           type: string
           format: email
-          description: User's email address
           example: john.doe@example.com
         password:
           type: string
           format: password
-          description: User's password
           example: password123
 
     UserResponse:
       type: object
       properties:
-        id:
+        _id:
           type: string
-          description: User ID
           example: 507f1f77bcf86cd799439011
         name:
           type: string
-          description: User's full name
           example: John Doe
         email:
           type: string
           format: email
-          description: User's email address
           example: john.doe@example.com
         role:
           type: string
           enum: [student, instructor, admin]
-          description: User's role
           example: student
         xp:
           type: integer
           minimum: 0
-          description: User's experience points
           example: 100
         badges:
           type: array
           items:
             type: string
-          description: User's badges
-          example:
-            - eco-warrior
-            - climate-champion
-
-    CourseModule:
-      type: object
-      required:
-        - title
-        - description
-        - order
-      properties:
-        title:
-          type: string
-          description: Module title
-          example: Introduction to Climate Change
-        description:
-          type: string
-          description: Module description
-          example: Understanding the basics of climate change
-        order:
-          type: integer
-          minimum: 1
-          description: Module order in the course
-          example: 1
-        duration:
-          type: integer
-          minimum: 0
-          description: Module duration in minutes
-          example: 15
-        videoUrl:
-          type: string
-          format: uri
-          description: URL to module video
-          example: https://example.com/video1.mp4
-        content:
-          type: string
-          description: Module content/text
-          example: This module covers the fundamental concepts...
-
-    CourseCreateInput:
-      type: object
-      required:
-        - title
-        - description
-        - modules
-      properties:
-        title:
-          type: string
-          minLength: 3
-          maxLength: 200
-          description: Course title
-          example: Climate Change Basics
-        slug:
-          type: string
-          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
-          description: URL-friendly course identifier (auto-generated if not provided)
-          example: climate-change-basics
-        description:
-          type: string
-          minLength: 10
-          description: Course description
-          example: Learn the fundamentals of climate change and its impact on our planet
-        modules:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/CourseModule'
-          description: Course modules
-        tags:
-          type: array
-          maxItems: 10
-          items:
-            type: string
-          description: Course tags
-          example:
-            - climate
-            - environment
-            - basics
-        price:
-          type: number
-          minimum: 0
-          default: 0
-          description: Course price
-          example: 0
-        impact_type:
-          type: string
-          enum: [climate, waste, energy, water, community, other]
-          default: climate
-          description: Type of environmental impact
-          example: climate
-        status:
-          type: string
-          enum: [draft, published, archived]
-          default: draft
-          description: Course status
-          example: draft
-
-    CourseResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Course ID
-          example: 507f1f77bcf86cd799439011
-        title:
-          type: string
-          description: Course title
-          example: Climate Change Basics
-        slug:
-          type: string
-          description: URL-friendly course identifier
-          example: climate-change-basics
-        description:
-          type: string
-          description: Course description
-          example: Learn the fundamentals of climate change
-        authorId:
-          oneOf:
-            - type: string
-            - $ref: '#/components/schemas/UserResponse'
-          description: Course author (populated with user details when fetched)
-          example:
-            id: 507f191e810c19729de860ea
-            name: Jane Instructor
-            email: jane@example.com
-            role: instructor
-        modules:
-          type: array
-          items:
-            $ref: '#/components/schemas/CourseModule'
-          description: Course modules
-        tags:
-          type: array
-          items:
-            type: string
-          description: Course tags
-          example:
-            - climate
-            - environment
-        price:
-          type: number
-          minimum: 0
-          description: Course price
-          example: 0
-        impact_type:
-          type: string
-          enum: [climate, waste, energy, water, community, other]
-          description: Type of environmental impact
-          example: climate
-        status:
-          type: string
-          enum: [draft, published, archived]
-          description: Course status
-          example: published
-        createdAt:
-          type: string
-          format: date-time
-          description: Course creation timestamp
-          example: '2024-01-01T00:00:00.000Z'
-        updatedAt:
-          type: string
-          format: date-time
-          description: Course last update timestamp
-          example: '2024-01-01T00:00:00.000Z'
-
-    CoursesListResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        data:
-          type: object
-          properties:
-            courses:
-              type: array
-              items:
-                $ref: '#/components/schemas/CourseResponse'
-            pagination:
-              type: object
-              properties:
-                page:
-                  type: integer
-                  description: Current page number
-                  example: 1
-                limit:
-                  type: integer
-                  description: Number of items per page
-                  example: 10
-                total:
-                  type: integer
-                  description: Total number of courses
-                  example: 1
-                pages:
-                  type: integer
-                  description: Total number of pages
-                  example: 1
+          example: [eco-warrior, climate-champion]
 
     AuthResponse:
       type: object
@@ -645,8 +1564,557 @@ components:
               $ref: '#/components/schemas/UserResponse'
             token:
               type: string
-              description: JWT authentication token
               example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    CourseCreateInput:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: Climate Change Basics
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          example: climate-change-basics
+        description:
+          type: string
+          minLength: 10
+          example: Learn the fundamentals of climate change
+        modules:
+          type: array
+          items:
+            type: string
+          description: Array of module ObjectIds
+          example: []
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          example: [climate, environment, basics]
+        price:
+          type: number
+          minimum: 0
+          default: 0
+          example: 0
+        impact_type:
+          type: string
+          enum: [climate, waste, energy, water, community, other]
+          default: climate
+          example: climate
+        status:
+          type: string
+          enum: [draft, published, archived]
+          default: draft
+          example: draft
+
+    CourseUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        description:
+          type: string
+          minLength: 10
+        modules:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        price:
+          type: number
+          minimum: 0
+        impact_type:
+          type: string
+          enum: [climate, waste, energy, water, community, other]
+        status:
+          type: string
+          enum: [draft, published, archived]
+
+    CourseResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        title:
+          type: string
+          example: Climate Change Basics
+        slug:
+          type: string
+          example: climate-change-basics
+        description:
+          type: string
+          example: Learn the fundamentals of climate change
+        authorId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/UserResponse'
+          example:
+            _id: 507f191e810c19729de860ea
+            name: Jane Instructor
+            email: jane@example.com
+            role: instructor
+        modules:
+          type: array
+          items:
+            type: string
+          description: Array of module ObjectIds
+        tags:
+          type: array
+          items:
+            type: string
+          example: [climate, environment]
+        price:
+          type: number
+          example: 0
+        impact_type:
+          type: string
+          enum: [climate, waste, energy, water, community, other]
+          example: climate
+        status:
+          type: string
+          enum: [draft, published, archived]
+          example: published
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CoursesListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            courses:
+              type: array
+              items:
+                $ref: '#/components/schemas/CourseResponse'
+            count:
+              type: integer
+            total:
+              type: integer
+            page:
+              type: integer
+            pages:
+              type: integer
+
+    ModuleCreateInput:
+      type: object
+      required:
+        - title
+        - courseId
+        - order
+      properties:
+        title:
+          type: string
+          example: Introduction to Climate Change
+        courseId:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        order:
+          type: integer
+          minimum: 1
+          example: 1
+
+    ModuleUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        order:
+          type: integer
+          minimum: 1
+
+    ModuleResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        courseId:
+          type: string
+        order:
+          type: integer
+        lessons:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LessonCreateInput:
+      type: object
+      required:
+        - title
+        - content
+        - order
+        - moduleId
+      properties:
+        title:
+          type: string
+          example: What is Climate Change?
+        content:
+          type: string
+          example: Climate change refers to long-term shifts...
+        videoUrl:
+          type: string
+          format: uri
+          example: https://example.com/video.mp4
+        duration:
+          type: integer
+          minimum: 0
+          example: 10
+        order:
+          type: integer
+          minimum: 1
+          example: 1
+        moduleId:
+          type: string
+          example: 507f1f77bcf86cd799439011
+
+    LessonUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        videoUrl:
+          type: string
+          format: uri
+        duration:
+          type: integer
+          minimum: 0
+        order:
+          type: integer
+          minimum: 1
+
+    LessonResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        videoUrl:
+          type: string
+        duration:
+          type: integer
+        order:
+          type: integer
+        moduleId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    QuizQuestionOption:
+      type: object
+      required:
+        - text
+        - correct
+      properties:
+        text:
+          type: string
+          example: Yes, it is a natural process
+        correct:
+          type: boolean
+          example: true
+
+    QuizQuestion:
+      type: object
+      required:
+        - question
+        - options
+        - points
+      properties:
+        question:
+          type: string
+          example: Is the greenhouse effect natural?
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestionOption'
+          minItems: 2
+          maxItems: 6
+        points:
+          type: integer
+          minimum: 1
+          example: 10
+
+    QuizCreateInput:
+      type: object
+      required:
+        - title
+        - lessonId
+        - questions
+      properties:
+        title:
+          type: string
+          example: Climate Change Quiz
+        lessonId:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+          minItems: 1
+
+    QuizUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+
+    QuizResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        lessonId:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AssignmentCreateInput:
+      type: object
+      required:
+        - title
+        - description
+        - dueDate
+        - maxScore
+      properties:
+        title:
+          type: string
+          example: Plant a Tree Assignment
+        description:
+          type: string
+          example: Plant a tree and document the process
+        lessonId:
+          type: string
+          description: Optional lesson ID
+        courseId:
+          type: string
+          description: Optional course ID (required if lessonId not provided)
+        dueDate:
+          type: string
+          format: date-time
+          example: '2024-12-31T23:59:59Z'
+        maxScore:
+          type: number
+          minimum: 0
+          example: 100
+        attachments:
+          type: array
+          items:
+            type: string
+          description: Array of attachment URLs
+          example: []
+
+    AssignmentUpdateInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        maxScore:
+          type: number
+          minimum: 0
+        attachments:
+          type: array
+          items:
+            type: string
+
+    AssignmentResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        lessonId:
+          type: string
+        courseId:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        maxScore:
+          type: number
+        attachments:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SubmissionMetadata:
+      type: object
+      properties:
+        geotag:
+          type: object
+          properties:
+            lat:
+              type: number
+              example: 40.7128
+            lng:
+              type: number
+              example: -74.0060
+        notes:
+          type: string
+          example: Completed at Central Park
+
+    SubmissionResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        assignmentId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/AssignmentResponse'
+        courseId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/CourseResponse'
+        userId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/UserResponse'
+        files:
+          type: array
+          items:
+            type: string
+          description: Array of file URLs
+        metadata:
+          $ref: '#/components/schemas/SubmissionMetadata'
+        score:
+          type: number
+          nullable: true
+        feedback:
+          type: string
+        status:
+          type: string
+          enum: [submitted, graded, rejected]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EnrollmentResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        userId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/UserResponse'
+        courseId:
+          oneOf:
+            - type: string
+            - $ref: '#/components/schemas/CourseResponse'
+        enrolledAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        status:
+          type: string
+          enum: [active, completed, dropped]
+
+    LeaderboardUser:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        score:
+          type: number
+          example: 1000
+        rank:
+          type: integer
+          example: 1
+
+    CertificateResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+        userId:
+          type: string
+        courseId:
+          type: string
+        url:
+          type: string
+          format: uri
+          description: URL to the certificate PDF
+        issuedAt:
+          type: string
+          format: date-time
 
     ErrorResponse:
       type: object
@@ -656,7 +2124,6 @@ components:
           example: false
         message:
           type: string
-          description: Error message
           example: Validation failed
         errors:
           type: array
@@ -665,15 +2132,65 @@ components:
             properties:
               field:
                 type: string
-                description: Field name with error
                 example: email
               message:
                 type: string
-                description: Error message
                 example: Please provide a valid email address
-          description: Array of validation errors (only present for validation errors)
         error:
           type: string
           description: Detailed error message (only in development mode)
-          example: Detailed error message here
 
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Validation failed
+            errors:
+              - field: email
+                message: Please provide a valid email address
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: User not authenticated
+
+    Forbidden:
+      description: Forbidden - User does not have required role
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Access denied. Instructor or admin role required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Course not found
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            message: Internal server error
+            error: Detailed error message (development only)

@@ -9,6 +9,9 @@ import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import Unauthorized from './pages/Unauthorized';
 import Projects from './pages/Projects';
+// Course pages
+import Courses from './pages/Courses';
+import CoursePlayer from './pages/CoursePlayer';
 // Student pages
 import StudentDashboard from './pages/student/Dashboard';
 import StudentCourses from './pages/student/Courses';
@@ -39,6 +42,32 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* Course Routes - Accessible to all authenticated users */}
+            <Route
+              path="/courses"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'instructor', 'admin']}>
+                  <Courses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/courses/:id"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'instructor', 'admin']}>
+                  <CoursePlayer />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/courses/:id/submit"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'instructor', 'admin']}>
+                  <CoursePlayer />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Student Routes */}
             <Route

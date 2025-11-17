@@ -6,15 +6,22 @@ import {
   getSubmissionById,
 } from '../controllers/submissionController';
 import { authenticate, authorize } from '../middleware/auth';
+import { uploadFilesAndImage, handleUploadError } from '../middleware/upload.middleware';
 
 const router = Router();
 
 /**
  * @route   POST /api/submissions
- * @desc    Submit an assignment
+ * @desc    Submit an assignment (multipart/form-data)
  * @access  Private
  */
-router.post('/', authenticate, submitAssignment);
+router.post(
+  '/',
+  authenticate,
+  uploadFilesAndImage as any, // Multer middleware type compatibility
+  handleUploadError as any, // Error handler middleware type compatibility
+  submitAssignment as any // UploadRequest type compatibility
+);
 
 /**
  * @route   GET /api/submissions/assignment/:assignmentId

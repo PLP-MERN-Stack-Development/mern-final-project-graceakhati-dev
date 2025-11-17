@@ -1,13 +1,19 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthService } from '@/hooks/useAuthService';
+import { useAuthStore } from '@/store/useAuthStore';
 import ImageLoader from '@/components/ImageLoader';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { uiIllustrations } from '@/utils/imagePaths';
 
+/**
+ * Login Page Component
+ * Handles user authentication with email/password or Google OAuth
+ */
 function LoginPage() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, user, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isLoading, error: authError } = useAuthService();
+  const { user, isAuthenticated } = useAuthStore();
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
   /**
@@ -15,18 +21,19 @@ function LoginPage() {
    */
   useEffect(() => {
     if (shouldRedirect && isAuthenticated && user) {
+      // Redirect based on user role
       switch (user.role) {
         case 'student':
-          navigate('/student/dashboard');
+          navigate('/student/dashboard', { replace: true });
           break;
         case 'instructor':
-          navigate('/instructor/dashboard');
+          navigate('/instructor/dashboard', { replace: true });
           break;
         case 'admin':
-          navigate('/admin/dashboard');
+          navigate('/admin/dashboard', { replace: true });
           break;
         default:
-          navigate('/student/dashboard');
+          navigate('/student/dashboard', { replace: true });
       }
       setShouldRedirect(false);
     }
@@ -60,6 +67,13 @@ function LoginPage() {
       setErrors((prev) => ({
         ...prev,
         [name]: undefined,
+      }));
+    }
+    // Clear general error when user starts typing
+    if (errors.general) {
+      setErrors((prev) => ({
+        ...prev,
+        general: undefined,
       }));
     }
   };
@@ -109,18 +123,17 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // Call login function from auth context
-      await login({
-        email: formData.email.trim(),
-        password: formData.password,
-      });
+      // Call login function from auth service
+      // JWT is automatically stored in localStorage by useAuthService via useAuthStore
+      await login(formData.email.trim(), formData.password);
 
       // Set flag to trigger redirect via useEffect
       setShouldRedirect(true);
-    } catch (error) {
+    } catch (error: any) {
       // Handle login errors
+      const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
       setErrors({
-        general: error instanceof Error ? error.message : 'Login failed. Please try again.',
+        general: errorMessage,
       });
       setIsSubmitting(false);
     }
@@ -131,17 +144,28 @@ function LoginPage() {
    */
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
+    setErrors({});
     try {
       await loginWithGoogle();
       // Set flag to trigger redirect via useEffect
       setShouldRedirect(true);
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error.message || 'Google login failed. Please try again.';
       setErrors({
-        general: error instanceof Error ? error.message : 'Google login failed. Please try again.',
+        general: errorMessage,
       });
       setIsGoogleLoading(false);
     }
   };
+
+  // Show auth error if present
+  useEffect(() => {
+    if (authError) {
+      setErrors({
+        general: authError,
+      });
+    }
+  }, [authError]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-light-sand via-soft-white to-light-sand">
@@ -186,8 +210,8 @@ function LoginPage() {
               <GoogleLoginButton
                 text="Continue with Google"
                 onClick={handleGoogleLogin}
-                disabled={isSubmitting}
-                isLoading={isGoogleLoading}
+                disabled={isSubmitting || isLoading}
+                isLoading={isGoogleLoading || isLoading}
               />
             </div>
 
@@ -222,7 +246,8 @@ function LoginPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your email"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  required
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">{errors.email}</p>
@@ -249,7 +274,8 @@ function LoginPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your password"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  required
                 />
                 {errors.password && (
                   <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -259,14 +285,14 @@ function LoginPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || isGoogleLoading}
+                disabled={isSubmitting || isLoading || isGoogleLoading}
                 className={`w-full px-6 py-4 bg-forest-green text-soft-white rounded-lg font-playful text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl ${
-                  isSubmitting || isGoogleLoading
+                  isSubmitting || isLoading || isGoogleLoading
                     ? 'opacity-50 cursor-not-allowed hover:scale-100'
                     : 'hover:bg-forest-green/90 hover:shadow-2xl animate-motion-subtle'
                 }`}
               >
-                {isSubmitting ? (
+                {isSubmitting || isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg
                       className="animate-spin h-5 w-5"
