@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ProtectedLink from '@/components/auth/protectedlink';
 
 function Footer() {
   const currentYear = new Date().getFullYear();
@@ -28,20 +29,20 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
+                <ProtectedLink
                   to="/catalog"
                   className="text-sm text-gray-200 hover:text-leaf-green transition-colors duration-200"
                 >
                   Courses
-                </Link>
+                </ProtectedLink>
               </li>
               <li>
-                <Link
+                <ProtectedLink
                   to="/projects"
                   className="text-sm text-gray-200 hover:text-leaf-green transition-colors duration-200"
                 >
                   Projects
-                </Link>
+                </ProtectedLink>
               </li>
             </ul>
           </div>
@@ -135,4 +136,5 @@ function Footer() {
 }
 
 export default Footer;
+
 
