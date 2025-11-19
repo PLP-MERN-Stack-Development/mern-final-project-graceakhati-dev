@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import ErrorPage from './components/ErrorPage';
 import Landing from './pages/Landing';
 import Catalog from './pages/Catalog';
@@ -30,18 +31,49 @@ import AdminReports from './pages/admin/Reports';
 import AdminSettings from './pages/admin/Settings';
 import AdminProfile from './pages/student/Profile'; // Reuse student profile
 
+/**
+ * Router configuration with React Router v7 future flags
+ * Fixes warnings: v7_startTransition and v7_relativeSplatPath
+ */
+const routerConfig = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  },
+};
+
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Layout>
-          <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router {...routerConfig}>
+          <Layout>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
-            <Route path="/catalog" element={<Catalog />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* Protected Catalog Route - Accessible to all authenticated users */}
+            <Route
+              path="/catalog"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'instructor', 'admin']}>
+                  <Catalog />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected Projects Route - Accessible to all authenticated users */}
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute allowedRoles={['student', 'instructor', 'admin']}>
+                  <Projects />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Course Routes - Accessible to all authenticated users */}
             <Route
@@ -69,7 +101,7 @@ function App() {
               }
             />
 
-            {/* Student Routes */}
+            {/* Student Routes - Only accessible to students */}
             <Route
               path="/student/*"
               element={
@@ -88,7 +120,7 @@ function App() {
               }
             />
 
-            {/* Instructor Routes */}
+            {/* Instructor Routes - Only accessible to instructors */}
             <Route
               path="/instructor/*"
               element={
@@ -108,7 +140,7 @@ function App() {
               }
             />
 
-            {/* Admin Routes */}
+            {/* Admin Routes - Only accessible to admins */}
             <Route
               path="/admin/*"
               element={
@@ -130,7 +162,8 @@ function App() {
               }
             />
 
-            {/* Legacy Protected Routes (for backward compatibility) */}
+            {/* Role-based Redirect Routes - Protected with role-based access control */}
+            {/* /dashboard redirects to student dashboard (students only) */}
             <Route
               path="/dashboard"
               element={
@@ -139,6 +172,26 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* /instructor redirects to instructor dashboard (instructors only) */}
+            <Route
+              path="/instructor"
+              element={
+                <ProtectedRoute allowedRoles={['instructor']}>
+                  <Navigate to="/instructor/dashboard" replace />
+                </ProtectedRoute>
+              }
+            />
+            {/* /admin redirects to admin dashboard (admins only) */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Navigate to="/admin/dashboard" replace />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Legacy Protected Routes (for backward compatibility) */}
             <Route
               path="/course/:id"
               element={
@@ -155,25 +208,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/instructor"
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <Navigate to="/instructor/dashboard" replace />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Navigate to="/admin/dashboard" replace />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Projects - Public for now, can be protected later */}
-            <Route path="/projects" element={<Projects />} />
 
             {/* Error Routes */}
             <Route path="/error/404" element={<ErrorPage type="404" />} />
@@ -181,10 +215,11 @@ function App() {
 
             {/* Catch-all 404 route */}
             <Route path="*" element={<ErrorPage type="404" />} />
-          </Routes>
-        </Layout>
-      </Router>
-    </AuthProvider>
+            </Routes>
+          </Layout>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,28 +1,32 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useCourseService } from '@/hooks/useCourseService';
-import { useSubmissionService } from '@/hooks/useSubmissionService';
+import courseService, { Course } from '@/services/courseService';
+import submissionService, { Submission } from '@/services/submissionService';
 import { useAuthStore } from '@/store/useAuthStore';
 import SubmitProjectModal from '@/components/SubmitProjectModal';
+import ProtectedButton from '@/components/auth/ProtectedButton';
 
 /**
  * CoursePlayer - Page for viewing a course with enroll and submit project functionality
+ * SECURITY: Only fetches data after authentication is verified
+ * Uses GET /api/courses/:id, POST /api/enrollments, and submission service
  */
 function CoursePlayer() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuthStore();
-  const { getCourse, enroll, isLoading: courseLoading, error: courseError } = useCourseService();
-  const { getMySubmissions, isLoading: submissionsLoading } = useSubmissionService();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
 
-  const [course, setCourse] = useState(null);
+  const [course, setCourse] = useState<Course | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [hasSubmission, setHasSubmission] = useState(false);
-  const [submissionData, setSubmissionData] = useState(null);
+  const [submissionData, setSubmissionData] = useState<Submission | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Check if we're on the submit route
   useEffect(() => {
@@ -33,41 +37,90 @@ function CoursePlayer() {
     }
   }, [location.pathname, id, navigate]);
 
-  // Load course data
+  // Load course data - SECURITY: Only after authentication
   useEffect(() => {
     const loadCourse = async () => {
+      // Wait for auth to finish loading
+      if (authLoading) {
+        return;
+      }
+
+      // SECURITY: Verify authentication before making API call
+      if (!isAuthenticated || !user) {
+        setIsLoading(false);
+        setError('Authentication required');
+        navigate('/login?redirect=' + encodeURIComponent(`/courses/${id}`));
+        return;
+      }
+
       if (!id) return;
+      
+      setIsLoading(true);
+      setError(null);
       try {
-        const courseData = await getCourse(id);
+        const courseData = await courseService.getCourse(id);
         setCourse(courseData);
-      } catch (err) {
-        console.error('Failed to load course:', err);
+      } catch (err: any) {
+        // Handle authentication errors
+        if (err.code === 'AUTH_REQUIRED' || err.response?.status === 401) {
+          setError('Authentication required');
+          navigate('/login?redirect=' + encodeURIComponent(`/courses/${id}`));
+        } else {
+          const errorMessage = err.message || 'Failed to load course';
+          setError(errorMessage);
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
     loadCourse();
-  }, [id, getCourse]);
+  }, [id, authLoading, isAuthenticated, user, navigate]);
 
-  // Check enrollment status and submissions
+  // Check enrollment status and submissions - SECURITY: Only after authentication
   useEffect(() => {
     const checkEnrollmentAndSubmissions = async () => {
-      if (!id || !user) return;
+      // Wait for auth to finish loading
+      if (authLoading) {
+        return;
+      }
+
+      // SECURITY: Verify authentication before making API calls
+      if (!isAuthenticated || !user || !id) {
+        setIsCheckingEnrollment(false);
+        return;
+      }
       
-      // TODO: Check enrollment status via API
-      // For now, we'll assume not enrolled initially
-      // You can add an endpoint to check enrollment: GET /api/enrollments/user/:userId
+      setIsCheckingEnrollment(true);
       
-      // Check if user has submissions for this course
       try {
-        const submissions = await getMySubmissions(id);
-        setHasSubmission(submissions && submissions.length > 0);
-      } catch (err) {
-        // If endpoint doesn't exist, that's okay
-        console.warn('Could not check submissions:', err);
+        // Check enrollment status
+        const enrolled = await courseService.checkEnrollment(id);
+        setIsEnrolled(enrolled);
+        
+        // Check if user has submissions for this course
+        try {
+          const submissions = await submissionService.getMySubmissions(id);
+          setHasSubmission(submissions && submissions.length > 0);
+        } catch (err: any) {
+          // Handle authentication errors
+          if (err.code === 'AUTH_REQUIRED' || err.response?.status === 401) {
+            navigate('/login?redirect=' + encodeURIComponent(`/courses/${id}`));
+          }
+          // If endpoint doesn't exist, that's okay - silently fail
+        }
+      } catch (err: any) {
+        // Handle authentication errors
+        if (err.code === 'AUTH_REQUIRED' || err.response?.status === 401) {
+          navigate('/login?redirect=' + encodeURIComponent(`/courses/${id}`));
+        }
+        // If endpoint doesn't exist, that's okay - silently fail
+      } finally {
+        setIsCheckingEnrollment(false);
       }
     };
     
     checkEnrollmentAndSubmissions();
-  }, [id, user, getMySubmissions]);
+  }, [id, user, authLoading, isAuthenticated, navigate]);
 
   // Handle enrollment
   const handleEnroll = async () => {
@@ -77,15 +130,19 @@ function CoursePlayer() {
     }
 
     setIsEnrolling(true);
+    setError(null);
     try {
-      await enroll(id);
+      await courseService.enroll(id);
       setIsEnrolled(true);
-      alert('Successfully enrolled in course!');
-    } catch (err) {
-      if (err.message?.includes('already enrolled')) {
+      // Show success message
+      setSubmissionSuccess(true);
+      setTimeout(() => setSubmissionSuccess(false), 3000);
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to enroll in course';
+      if (errorMessage.includes('already enrolled')) {
         setIsEnrolled(true);
       } else {
-        alert(err.message || 'Failed to enroll in course');
+        setError(errorMessage);
       }
     } finally {
       setIsEnrolling(false);
@@ -93,10 +150,9 @@ function CoursePlayer() {
   };
 
   // Handle project submission success
-  const handleSubmissionSuccess = (submission) => {
+  const handleSubmissionSuccess = (submission: Submission) => {
     setSubmissionSuccess(true);
     setHasSubmission(true);
-    // Store submission data to display aiScore
     setSubmissionData(submission);
     setTimeout(() => {
       setSubmissionSuccess(false);
@@ -106,33 +162,37 @@ function CoursePlayer() {
   // Handle submit project button click
   const handleSubmitProject = () => {
     if (!isEnrolled) {
-      alert('Please enroll in the course first');
+      setError('Please enroll in the course first');
       return;
     }
     setIsModalOpen(true);
   };
 
-  if (courseLoading && !course) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
           <p className="text-gray-600">Loading course...</p>
         </div>
       </div>
     );
   }
 
-  if (courseError && !course) {
+  if (error && !course) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <p className="text-red-600">Failed to load course: {courseError}</p>
-          <button
-            onClick={() => navigate('/courses')}
+          <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg max-w-md mx-auto">
+            <p className="text-red-600 font-semibold">Failed to load course</p>
+            <p className="text-red-500 text-sm mt-2">{error}</p>
+          </div>
+          <ProtectedButton
+            to="/courses"
             className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
             Back to Courses
-          </button>
+          </ProtectedButton>
         </div>
       </div>
     );
@@ -178,10 +238,17 @@ function CoursePlayer() {
         </div>
       )}
 
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+          <p className="text-red-600 font-semibold">{error}</p>
+        </div>
+      )}
+
       {/* Course Header */}
       <div className="mb-6">
         <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-800">
-          {course.title || course.name}
+          {course.title}
         </h1>
         <p className="text-gray-600 text-lg">
           {course.description}
@@ -190,10 +257,15 @@ function CoursePlayer() {
 
       {/* Action Buttons */}
       <div className="mb-8 flex flex-wrap gap-4">
-        {!isEnrolled ? (
+        {isCheckingEnrollment ? (
+          <div className="px-6 py-3 bg-gray-100 text-gray-600 rounded-lg font-semibold">
+            Checking enrollment...
+          </div>
+        ) : !isEnrolled ? (
           <button
             onClick={handleEnroll}
             disabled={isEnrolling || !user}
+            data-testid={`enroll-btn-${id}`}
             className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-lg"
           >
             {isEnrolling ? 'Enrolling...' : 'Enroll in Course'}
@@ -206,6 +278,7 @@ function CoursePlayer() {
             <button
               onClick={handleSubmitProject}
               disabled={hasSubmission}
+              data-testid="submit-project-button"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {hasSubmission ? 'Project Already Submitted' : 'Submit Project'}
@@ -226,9 +299,11 @@ function CoursePlayer() {
             <div className="mt-6">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Modules</h3>
               <ul className="space-y-2">
-                {course.modules.map((module, index) => (
-                  <li key={module._id || index} className="p-3 bg-gray-50 rounded-lg">
-                    <span className="font-semibold">{index + 1}. {module.title}</span>
+                {course.modules.map((module: any, index: number) => (
+                  <li key={typeof module === 'string' ? module : (module._id || index)} className="p-3 bg-gray-50 rounded-lg">
+                    <span className="font-semibold">
+                      {index + 1}. {typeof module === 'string' ? 'Module' : (module.title || 'Module')}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -240,8 +315,10 @@ function CoursePlayer() {
       {/* Submit Project Modal */}
       <SubmitProjectModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        courseId={id}
+        onClose={() => {
+          setIsModalOpen(false);
+        }}
+        courseId={id || ''}
         onSuccess={handleSubmissionSuccess}
       />
     </div>

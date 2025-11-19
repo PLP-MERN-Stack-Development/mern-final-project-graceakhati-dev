@@ -1,25 +1,6 @@
 import { useState, useCallback } from 'react';
 import courseService from '@/services/courseService';
 
-interface Course {
-  _id?: string;
-  id?: string;
-  title: string;
-  description: string;
-  [key: string]: any;
-}
-
-interface CoursesResult {
-  courses: Course[];
-  pagination?: any;
-}
-
-interface Enrollment {
-  _id?: string;
-  id?: string;
-  [key: string]: any;
-}
-
 /**
  * React hook for course operations
  * @returns Course service methods and state

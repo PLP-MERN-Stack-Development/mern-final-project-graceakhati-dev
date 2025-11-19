@@ -2,6 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
+import googleAuthRoutes from './routes/googleAuthRoutes';
 import courseRoutes from './routes/courseRoutes';
 import lessonRoutes from './routes/lessonRoutes';
 import moduleRoutes from './routes/moduleRoutes';
@@ -53,6 +54,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/google', googleAuthRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/lessons', lessonRoutes);
@@ -62,6 +64,13 @@ app.use('/api/submissions', submissionRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/certificates', certificateRoutes);
+
+// Test utilities routes (only in test environment)
+if (process.env.NODE_ENV === 'test') {
+  // Dynamically import testUtils routes only in test mode
+  const testUtilsRoutes = require('./routes/testUtils').default;
+  app.use('/api/test', testUtilsRoutes);
+}
 
 // 404 handler
 app.use((req: Request, res: Response): void => {

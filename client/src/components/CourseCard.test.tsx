@@ -183,13 +183,44 @@ describe('CourseCard Component', () => {
     it('should link to correct course route', () => {
       renderWithRouter(defaultProps);
       const link = screen.getByTestId('course-card-1').closest('a');
-      expect(link).toHaveAttribute('href', '/course/1');
+      expect(link).toHaveAttribute('href', '/courses/1');
     });
 
     it('should link to correct course route with different id', () => {
       renderWithRouter({ ...defaultProps, id: '42' });
       const link = screen.getByTestId('course-card-42').closest('a');
-      expect(link).toHaveAttribute('href', '/course/42');
+      expect(link).toHaveAttribute('href', '/courses/42');
+    });
+  });
+
+  describe('Enroll Button Context', () => {
+    it('should render title and description for enroll button context', () => {
+      renderWithRouter(defaultProps);
+      
+      // Verify title is rendered (required for enroll button context)
+      const title = screen.getByTestId('course-title');
+      expect(title).toHaveTextContent('Introduction to Climate Science');
+      
+      // Verify description is rendered (required for enroll button context)
+      const description = screen.getByTestId('course-description');
+      expect(description).toHaveTextContent('Learn the fundamentals of climate change and its impacts.');
+      
+      // Note: Enroll button is typically rendered in a wrapper component (e.g., EnrollableCourseCard)
+      // CourseCard itself is a Link component, so enroll functionality is handled by parent components
+    });
+
+    it('should render all required elements for enrollment flow', () => {
+      renderWithRouter(defaultProps);
+      
+      // All elements needed for enrollment context
+      expect(screen.getByTestId('course-card-1')).toBeInTheDocument();
+      expect(screen.getByTestId('course-title')).toBeInTheDocument();
+      expect(screen.getByTestId('course-description')).toBeInTheDocument();
+      
+      // Card should be clickable (Link component)
+      const link = screen.getByTestId('course-card-1').closest('a');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href');
     });
   });
 

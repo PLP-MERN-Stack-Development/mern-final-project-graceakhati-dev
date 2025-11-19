@@ -44,14 +44,20 @@ let eventsWorker: Worker<EventPayload> | null = null;
 
 /**
  * Initialize Events Queue
+ * Returns null if Redis is not available
  */
-export const initializeQueue = (): Queue<EventPayload> => {
+export const initializeQueue = (): Queue<EventPayload> | null => {
   if (eventsQueue) {
     return eventsQueue;
   }
 
   try {
     const redisClient = getRedisClient();
+    
+    if (!redisClient) {
+      console.warn('⚠️  Redis not available, queue not initialized');
+      return null;
+    }
     
     // Get Redis connection config
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -79,21 +85,27 @@ export const initializeQueue = (): Queue<EventPayload> => {
     console.log('✅ Events queue initialized');
     return eventsQueue;
   } catch (error) {
-    console.error('❌ Failed to initialize events queue:', error);
-    throw error;
+    console.warn('⚠️  Failed to initialize events queue, continuing without queue:', (error as Error).message);
+    return null;
   }
 };
 
 /**
  * Initialize Events Worker
+ * Returns null if Redis is not available
  */
-export const initializeWorker = (): Worker<EventPayload> => {
+export const initializeWorker = (): Worker<EventPayload> | null => {
   if (eventsWorker) {
     return eventsWorker;
   }
 
   try {
     const redisClient = getRedisClient();
+    
+    if (!redisClient) {
+      console.warn('⚠️  Redis not available, worker not initialized');
+      return null;
+    }
     
     // Get Redis connection config
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -153,8 +165,8 @@ export const initializeWorker = (): Worker<EventPayload> => {
     console.log('✅ Events worker initialized');
     return eventsWorker;
   } catch (error) {
-    console.error('❌ Failed to initialize events worker:', error);
-    throw error;
+    console.warn('⚠️  Failed to initialize events worker, continuing without worker:', (error as Error).message);
+    return null;
   }
 };
 
@@ -308,15 +320,24 @@ async function checkBadgeEligibility(userId: string, currentXp: number): Promise
  * @param payload - Event payload (must include userId)
  * @returns Job ID
  */
-export async function dispatchEvent(eventName: EventName, payload: EventPayload): Promise<string> {
+export async function dispatchEvent(eventName: EventName, payload: EventPayload): Promise<string | null> {
   try {
     if (!eventsQueue) {
       // Try to initialize queue if not already initialized
-      initializeQueue();
+      const queue = initializeQueue();
+      if (!queue) {
+        // Redis not available, process event synchronously
+        console.log(`ℹ️  Processing event synchronously (Redis unavailable): ${eventName}`);
+        await handleEventDirectly(eventName, payload);
+        return null;
+      }
     }
 
     if (!eventsQueue) {
-      throw new Error('Events queue not initialized');
+      // Still no queue, process directly
+      console.log(`ℹ️  Processing event synchronously (queue unavailable): ${eventName}`);
+      await handleEventDirectly(eventName, payload);
+      return null;
     }
 
     // Validate payload
@@ -336,8 +357,32 @@ export async function dispatchEvent(eventName: EventName, payload: EventPayload)
     console.log(`📤 Event dispatched: ${eventName}`, { jobId: job.id, payload });
     return job.id!;
   } catch (error) {
-    console.error('Error dispatching event:', error);
-    throw new Error(`Failed to dispatch event: ${(error as Error).message}`);
+    // If queue fails, process event directly
+    console.warn(`⚠️  Queue dispatch failed, processing event directly: ${(error as Error).message}`);
+    try {
+      await handleEventDirectly(eventName, payload);
+      return null;
+    } catch (directError) {
+      console.error('Error processing event directly:', directError);
+      // Don't throw - event processing is not critical
+      return null;
+    }
+  }
+}
+
+/**
+ * Handle event directly without queue (fallback when Redis unavailable)
+ */
+async function handleEventDirectly(eventName: EventName, payload: EventPayload): Promise<void> {
+  switch (eventName) {
+    case 'project_verified':
+      await handleProjectVerified(payload);
+      break;
+    case 'module_completed':
+      await handleModuleCompleted(payload);
+      break;
+    default:
+      console.warn(`Unknown event type: ${eventName}`);
   }
 }
 

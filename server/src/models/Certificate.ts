@@ -4,12 +4,18 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
  * Certificate Document Interface
  */
 export interface ICertificate extends Document {
+  _id: Types.ObjectId;
   userId: Types.ObjectId;
   courseId: Types.ObjectId;
-  certificateId: string;
+  certificateId?: string;
+  moduleId?: Types.ObjectId;
+  assignmentId?: Types.ObjectId;
+  url: string;
+  publicId?: string;
+  grade?: number;
   issuedAt: Date;
-  impactSummary: string;
-  hash: string;
+  impactSummary?: string;
+  hash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,9 +37,31 @@ const certificateSchema = new Schema<ICertificate>(
     },
     certificateId: {
       type: String,
-      required: [true, 'Certificate ID is required'],
       unique: true,
+      sparse: true,
       trim: true,
+    },
+    moduleId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Module',
+    },
+    assignmentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Assignment',
+    },
+    url: {
+      type: String,
+      required: [true, 'Certificate URL is required'],
+      trim: true,
+    },
+    publicId: {
+      type: String,
+      trim: true,
+    },
+    grade: {
+      type: Number,
+      min: [0, 'Grade cannot be negative'],
+      max: [100, 'Grade cannot exceed 100'],
     },
     issuedAt: {
       type: Date,
@@ -42,13 +70,11 @@ const certificateSchema = new Schema<ICertificate>(
     },
     impactSummary: {
       type: String,
-      required: [true, 'Impact summary is required'],
       trim: true,
       maxlength: [1000, 'Impact summary cannot exceed 1000 characters'],
     },
     hash: {
       type: String,
-      required: [true, 'Hash is required'],
       trim: true,
     },
   },
@@ -60,7 +86,7 @@ const certificateSchema = new Schema<ICertificate>(
 // Create indexes
 certificateSchema.index({ userId: 1 });
 certificateSchema.index({ courseId: 1 });
-certificateSchema.index({ certificateId: 1 }, { unique: true });
+// Note: certificateId index is automatically created by unique: true in field definition
 
 // Prevent duplicate certificates for same user and course (unique index)
 certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true });

@@ -115,9 +115,11 @@ const getRedisClient = (): Redis | MockRedis => {
     return redisClient;
   }
 
+  // Check if Redis is enabled via environment variable
+  const enableRedis = process.env.ENABLE_REDIS === 'true';
   const redisUrl = process.env.REDIS_URL;
 
-  if (redisUrl) {
+  if (enableRedis && redisUrl) {
     try {
       redisClient = new Redis(redisUrl, {
         retryStrategy: (times: number) => {
@@ -158,7 +160,12 @@ const getRedisClient = (): Redis | MockRedis => {
       return redisClient;
     }
   } else {
-    console.log('ℹ️  Redis not configured (REDIS_URL not set), using in-memory mock');
+    // Redis disabled or not configured, use mock
+    if (!enableRedis) {
+      console.log('ℹ️  Redis disabled (ENABLE_REDIS not set to "true"), using in-memory mock');
+    } else {
+      console.log('ℹ️  Redis not configured (REDIS_URL not set), using in-memory mock');
+    }
     redisClient = new MockRedis();
     return redisClient;
   }

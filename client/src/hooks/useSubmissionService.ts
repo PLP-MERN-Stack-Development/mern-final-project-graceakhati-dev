@@ -1,14 +1,6 @@
 import { useState, useCallback } from 'react';
 import submissionService from '@/services/submissionService';
 
-interface Submission {
-  _id?: string;
-  id?: string;
-  aiScore?: number;
-  verified?: boolean;
-  [key: string]: any;
-}
-
 interface SubmitProjectParams {
   courseId: string;
   image: File;

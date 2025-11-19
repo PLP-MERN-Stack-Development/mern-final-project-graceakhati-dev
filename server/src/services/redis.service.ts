@@ -77,8 +77,17 @@ const getRedisConfig = (): RedisOptions => {
 
 /**
  * Initialize Redis Connection
+ * Returns null if Redis is disabled or unavailable
  */
-export const connectRedis = async (): Promise<Redis> => {
+export const connectRedis = async (): Promise<Redis | null> => {
+  // Check if Redis is enabled via environment variable
+  const enableRedis = process.env.ENABLE_REDIS === 'true';
+  
+  if (!enableRedis) {
+    console.log('ℹ️  Redis is disabled (ENABLE_REDIS not set to "true")');
+    return null;
+  }
+
   if (redisClient && redisClient.status === 'ready') {
     return redisClient;
   }
@@ -113,17 +122,19 @@ export const connectRedis = async (): Promise<Redis> => {
 
     return redisClient;
   } catch (error) {
-    console.error('❌ Failed to connect to Redis:', error);
-    throw error;
+    console.warn('⚠️  Redis connection failed, continuing without Redis:', (error as Error).message);
+    redisClient = null;
+    return null;
   }
 };
 
 /**
  * Get Redis Client Instance
+ * Returns null if Redis is not available
  */
-export const getRedisClient = (): Redis => {
+export const getRedisClient = (): Redis | null => {
   if (!redisClient || redisClient.status !== 'ready') {
-    throw new Error('Redis client is not connected. Call connectRedis() first.');
+    return null;
   }
   return redisClient;
 };
@@ -145,6 +156,10 @@ export const getRedisClient = (): Redis => {
 export const addXp = async (userId: string, xp: number): Promise<number> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, return 0 (fallback to MongoDB-only)
+      return 0;
+    }
     const leaderboardKey = 'leaderboard';
 
     // Increment score in sorted set
@@ -152,8 +167,8 @@ export const addXp = async (userId: string, xp: number): Promise<number> => {
 
     return parseFloat(newScore);
   } catch (error) {
-    console.error('Error adding XP:', error);
-    throw new Error(`Failed to add XP: ${(error as Error).message}`);
+    console.warn('Redis addXp failed, continuing without Redis:', (error as Error).message);
+    return 0;
   }
 };
 
@@ -177,6 +192,10 @@ export const addXp = async (userId: string, xp: number): Promise<number> => {
 export const getTopUsers = async (limit: number = 10): Promise<LeaderboardEntry[]> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, return empty array
+      return [];
+    }
     const leaderboardKey = 'leaderboard';
 
     // Get top N users with scores (ZREVRANGE with scores)
@@ -193,8 +212,8 @@ export const getTopUsers = async (limit: number = 10): Promise<LeaderboardEntry[
 
     return entries;
   } catch (error) {
-    console.error('Error getting top users:', error);
-    throw new Error(`Failed to get top users: ${(error as Error).message}`);
+    console.warn('Redis getTopUsers failed, returning empty array:', (error as Error).message);
+    return [];
   }
 };
 
@@ -215,6 +234,14 @@ export const getTopUsers = async (limit: number = 10): Promise<LeaderboardEntry[
 export const getUserRank = async (userId: string): Promise<UserRank> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, return default
+      return {
+        userId,
+        rank: -1,
+        score: 0,
+      };
+    }
     const leaderboardKey = 'leaderboard';
 
     // Get user's score
@@ -238,8 +265,12 @@ export const getUserRank = async (userId: string): Promise<UserRank> => {
       score: parseFloat(score),
     };
   } catch (error) {
-    console.error('Error getting user rank:', error);
-    throw new Error(`Failed to get user rank: ${(error as Error).message}`);
+    console.warn('Redis getUserRank failed, returning default:', (error as Error).message);
+    return {
+      userId,
+      rank: -1,
+      score: 0,
+    };
   }
 };
 
@@ -262,6 +293,10 @@ export const getUsersByRank = async (
 ): Promise<LeaderboardEntry[]> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, return empty array
+      return [];
+    }
     const leaderboardKey = 'leaderboard';
 
     // Convert to 0-based indices
@@ -280,8 +315,8 @@ export const getUsersByRank = async (
 
     return entries;
   } catch (error) {
-    console.error('Error getting users by rank:', error);
-    throw new Error(`Failed to get users by rank: ${(error as Error).message}`);
+    console.warn('Redis getUsersByRank failed, returning empty array:', (error as Error).message);
+    return [];
   }
 };
 
@@ -293,12 +328,16 @@ export const getUsersByRank = async (
 export const getLeaderboardCount = async (): Promise<number> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, return 0
+      return 0;
+    }
     const leaderboardKey = 'leaderboard';
 
     return await client.zcard(leaderboardKey);
   } catch (error) {
-    console.error('Error getting leaderboard count:', error);
-    throw new Error(`Failed to get leaderboard count: ${(error as Error).message}`);
+    console.warn('Redis getLeaderboardCount failed, returning 0:', (error as Error).message);
+    return 0;
   }
 };
 
@@ -310,12 +349,15 @@ export const getLeaderboardCount = async (): Promise<number> => {
 export const resetUserScore = async (userId: string): Promise<void> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, silently succeed
+      return;
+    }
     const leaderboardKey = 'leaderboard';
 
     await client.zrem(leaderboardKey, userId);
   } catch (error) {
-    console.error('Error resetting user score:', error);
-    throw new Error(`Failed to reset user score: ${(error as Error).message}`);
+    console.warn('Redis resetUserScore failed, continuing:', (error as Error).message);
   }
 };
 
@@ -328,12 +370,15 @@ export const resetUserScore = async (userId: string): Promise<void> => {
 export const setUserScore = async (userId: string, score: number): Promise<void> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      // Redis not available, silently succeed
+      return;
+    }
     const leaderboardKey = 'leaderboard';
 
     await client.zadd(leaderboardKey, score, userId);
   } catch (error) {
-    console.error('Error setting user score:', error);
-    throw new Error(`Failed to set user score: ${(error as Error).message}`);
+    console.warn('Redis setUserScore failed, continuing:', (error as Error).message);
   }
 };
 
@@ -354,10 +399,13 @@ export const disconnectRedis = async (): Promise<void> => {
 export const healthCheck = async (): Promise<boolean> => {
   try {
     const client = getRedisClient();
+    if (!client) {
+      return false; // Redis not enabled/available
+    }
     const result = await client.ping();
     return result === 'PONG';
   } catch (error) {
-    console.error('Redis health check failed:', error);
+    console.warn('Redis health check failed:', (error as Error).message);
     return false;
   }
 };

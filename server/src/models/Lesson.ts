@@ -4,6 +4,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
  * Lesson Document Interface
  */
 export interface ILesson extends Document {
+  _id: Types.ObjectId;
   title: string;
   content: string;
   videoUrl?: string;

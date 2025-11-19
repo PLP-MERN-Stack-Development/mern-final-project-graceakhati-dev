@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 import { validationResult } from 'express-validator';
 import { AuthRequest } from '../middleware/auth';
 import Module from '../models/Module';
-import Course from '../models/Course';
+import Course, { ICourse } from '../models/Course';
 
 /**
  * Create a new module
@@ -46,7 +46,7 @@ export const createModule = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Check authorization (instructor/admin or course author)
-    const userId = (req.user._id as any).toString();
+    const userId = req.user._id.toString();
     const isAuthor = course.authorId.toString() === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
@@ -69,7 +69,7 @@ export const createModule = async (req: AuthRequest, res: Response): Promise<voi
     await module.save();
 
     // Add module to course
-    course.modules.push(module._id as mongoose.Types.ObjectId);
+    course.modules.push(module._id);
     await course.save();
 
     await module.populate('courseId', 'title slug');
@@ -196,9 +196,26 @@ export const updateModule = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Check authorization
-    const course = module.courseId as any;
-    const userId = (req.user._id as any).toString();
-    const isAuthor = course.authorId.toString() === userId;
+    // module.courseId is populated, so it's a Course document
+    let courseAuthorId: string;
+    if (module.courseId instanceof Types.ObjectId) {
+      // Not populated, fetch course
+      const courseDoc = await Course.findById(module.courseId);
+      if (!courseDoc) {
+        res.status(404).json({
+          success: false,
+          message: 'Course not found',
+        });
+        return;
+      }
+      courseAuthorId = courseDoc.authorId.toString();
+    } else {
+      // Populated Course object
+      const populatedCourse = module.courseId as unknown as ICourse;
+      courseAuthorId = populatedCourse.authorId.toString();
+    }
+    const userId = req.user._id.toString();
+    const isAuthor = courseAuthorId === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
     if (!isAuthor && !isInstructorOrAdmin) {
@@ -259,9 +276,26 @@ export const deleteModule = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Check authorization
-    const course = module.courseId as any;
-    const userId = (req.user._id as any).toString();
-    const isAuthor = course.authorId.toString() === userId;
+    // module.courseId is populated, so it's a Course document
+    let courseAuthorId: string;
+    if (module.courseId instanceof Types.ObjectId) {
+      // Not populated, fetch course
+      const courseDoc = await Course.findById(module.courseId);
+      if (!courseDoc) {
+        res.status(404).json({
+          success: false,
+          message: 'Course not found',
+        });
+        return;
+      }
+      courseAuthorId = courseDoc.authorId.toString();
+    } else {
+      // Populated Course object
+      const populatedCourse = module.courseId as unknown as ICourse;
+      courseAuthorId = populatedCourse.authorId.toString();
+    }
+    const userId = req.user._id.toString();
+    const isAuthor = courseAuthorId === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
     if (!isAuthor && !isInstructorOrAdmin) {
@@ -273,7 +307,17 @@ export const deleteModule = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Remove module from course
-    const courseDoc = await Course.findById(course._id);
+    // Get courseId from module (could be ObjectId or populated Course)
+    let courseIdToRemove: Types.ObjectId;
+    if (module.courseId instanceof Types.ObjectId) {
+      courseIdToRemove = module.courseId;
+    } else {
+      // Populated Course object
+      const populatedCourse = module.courseId as unknown as ICourse;
+      courseIdToRemove = populatedCourse._id;
+    }
+    
+    const courseDoc = await Course.findById(courseIdToRemove);
     if (courseDoc) {
       courseDoc.modules = courseDoc.modules.filter(
         (moduleId) => moduleId.toString() !== id

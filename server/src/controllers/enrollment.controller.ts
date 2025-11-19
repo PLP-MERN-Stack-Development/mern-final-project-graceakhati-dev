@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import Enrollment from '../models/Enrollment';
 import Course from '../models/Course';
@@ -45,7 +46,7 @@ export const enrollInCourse = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const userId = (req.user._id as any).toString();
+    const userId = req.user._id.toString();
 
     // Check if already enrolled
     const existingEnrollment = await Enrollment.findOne({
@@ -108,7 +109,7 @@ export const getUserEnrollments = async (req: AuthRequest, res: Response): Promi
     }
 
     const { userId } = req.params as { userId: string };
-    const requestingUserId = (req.user._id as any).toString();
+    const requestingUserId = req.user._id.toString();
 
     // Users can only view their own enrollments unless admin/instructor
     if (userId !== requestingUserId && !['admin', 'instructor'].includes(req.user.role)) {
@@ -222,8 +223,12 @@ export const updateEnrollmentProgress = async (req: AuthRequest, res: Response):
       return;
     }
 
-    const userId = (req.user._id as any).toString();
-    if (enrollment.userId.toString() !== userId && !['admin', 'instructor'].includes(req.user.role)) {
+    const userId = req.user._id.toString();
+    // enrollment.userId is Types.ObjectId, safe to call toString()
+    const enrollmentUserId = enrollment.userId instanceof Types.ObjectId 
+      ? enrollment.userId.toString() 
+      : String(enrollment.userId);
+    if (enrollmentUserId !== userId && !['admin', 'instructor'].includes(req.user.role)) {
       res.status(403).json({
         success: false,
         message: 'You can only update your own enrollment progress',
@@ -283,8 +288,12 @@ export const dropEnrollment = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const userId = (req.user._id as any).toString();
-    if (enrollment.userId.toString() !== userId && !['admin', 'instructor'].includes(req.user.role)) {
+    const userId = req.user._id.toString();
+    // enrollment.userId is Types.ObjectId, safe to call toString()
+    const enrollmentUserId = enrollment.userId instanceof Types.ObjectId 
+      ? enrollment.userId.toString() 
+      : String(enrollment.userId);
+    if (enrollmentUserId !== userId && !['admin', 'instructor'].includes(req.user.role)) {
       res.status(403).json({
         success: false,
         message: 'You can only drop your own enrollment',

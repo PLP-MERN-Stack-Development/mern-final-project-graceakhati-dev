@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import ProtectedLink from './auth/ProtectedLink';
 import ImageLoader from './ImageLoader';
 
 export interface CourseCardProps {
@@ -27,8 +27,8 @@ function CourseCard({
   };
 
   return (
-    <Link
-      to={`/course/${id}`}
+    <ProtectedLink
+      to={`/courses/${id}`}
       className="block group"
       data-testid={`course-card-${id}`}
     >
@@ -143,7 +143,7 @@ function CourseCard({
           </div>
         </div>
       </div>
-    </Link>
+    </ProtectedLink>
   );
 }
 

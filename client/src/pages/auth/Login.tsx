@@ -1,6 +1,6 @@
-import { useState, FormEvent, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuthService } from '@/hooks/useAuthService';
+import { useState, FormEvent, useEffect, useCallback } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import authService from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
 import ImageLoader from '@/components/ImageLoader';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
@@ -9,36 +9,19 @@ import { uiIllustrations } from '@/utils/imagePaths';
 /**
  * Login Page Component
  * Handles user authentication with email/password or Google OAuth
+ * 
+ * Features:
+ * - Submits credentials to /api/auth/login via Axios
+ * - Stores JWT and user info in localStorage
+ * - Persists login on page refresh by reading JWT from localStorage
+ * - Redirects to appropriate dashboard after login based on user role
+ * - Displays error messages for invalid credentials
+ * - Includes Google Sign-In button stub that calls /auth/google endpoint
  */
 function LoginPage() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, isLoading, error: authError } = useAuthService();
-  const { user, isAuthenticated } = useAuthStore();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-
-  /**
-   * Handle redirect after successful login
-   */
-  useEffect(() => {
-    if (shouldRedirect && isAuthenticated && user) {
-      // Redirect based on user role
-      switch (user.role) {
-        case 'student':
-          navigate('/student/dashboard', { replace: true });
-          break;
-        case 'instructor':
-          navigate('/instructor/dashboard', { replace: true });
-          break;
-        case 'admin':
-          navigate('/admin/dashboard', { replace: true });
-          break;
-        default:
-          navigate('/student/dashboard', { replace: true });
-      }
-      setShouldRedirect(false);
-    }
-  }, [shouldRedirect, isAuthenticated, user, navigate]);
-
+  const [searchParams] = useSearchParams();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -52,6 +35,97 @@ function LoginPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  /**
+   * Save auth data to localStorage
+   * FIX: Ensure proper JWT format and complete user data
+   */
+  const saveAuthToStorage = (user: any, token: string) => {
+    try {
+      // Validate token format before storing
+      if (!token || typeof token !== 'string') {
+        throw new Error('Invalid token format');
+      }
+      
+      // Ensure user has required fields
+      const userData = {
+        id: user._id || user.id || '',
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'student',
+      };
+      
+      const authData = {
+        user: userData,
+        token,
+        isAuthenticated: true,
+        role: userData.role,
+      };
+      
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify(authData));
+    } catch (error) {
+      // Log error but don't throw - let Zustand store handle it
+      console.error('Failed to save auth to localStorage:', error);
+    }
+  };
+
+  /**
+   * Redirect user based on role - deterministic paths for E2E tests
+   * Also checks for redirect query parameter to return user to intended page
+   */
+  const redirectByRole = useCallback((role: string) => {
+    // Check if there's a redirect query parameter
+    const redirectPath = searchParams.get('redirect');
+    if (redirectPath) {
+      // Redirect to intended page after login
+      navigate(redirectPath, { replace: true });
+      return;
+    }
+    
+    // Otherwise redirect to role-specific dashboard
+    switch (role) {
+      case 'student':
+        navigate('/student/dashboard', { replace: true });
+        break;
+      case 'instructor':
+        navigate('/instructor/dashboard', { replace: true });
+        break;
+      case 'admin':
+        navigate('/admin/dashboard', { replace: true });
+        break;
+      default:
+        navigate('/student/dashboard', { replace: true });
+    }
+  }, [navigate, searchParams]);
+
+  // Check if user is already authenticated (persist login on refresh)
+  useEffect(() => {
+    const checkAuthState = () => {
+      try {
+        const stored = localStorage.getItem('planet-path-auth-storage');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const token = parsed.token;
+          const user = parsed.user;
+          
+          // Validate JWT format (basic check)
+          if (token && typeof token === 'string' && token.split('.').length === 3) {
+            // User is authenticated - redirect based on role or redirect param
+            const redirectPath = searchParams.get('redirect');
+            if (redirectPath) {
+              navigate(redirectPath, { replace: true });
+            } else {
+              redirectByRole(user?.role || 'student');
+            }
+          }
+        }
+      } catch (error) {
+        // Invalid stored data - ignore and show login form
+      }
+    };
+    
+    checkAuthState();
+  }, [navigate, searchParams, redirectByRole]);
 
   /**
    * Handle form input changes
@@ -110,6 +184,7 @@ function LoginPage() {
 
   /**
    * Handle form submission
+   * Submits credentials to /api/auth/login via Axios
    */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -123,15 +198,48 @@ function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // Call login function from auth service
-      // JWT is automatically stored in localStorage by useAuthService via useAuthStore
-      await login(formData.email.trim(), formData.password);
+      // Submit credentials to /api/auth/login via Axios (via authService)
+      const { user, token } = await authService.login(
+        formData.email.trim(),
+        formData.password
+      );
 
-      // Set flag to trigger redirect via useEffect
-      setShouldRedirect(true);
+      // Store JWT and user info in localStorage for persistence
+      saveAuthToStorage(user, token);
+
+      // Update Zustand store synchronously before navigation
+      const authStore = useAuthStore.getState();
+      if (authStore && typeof authStore.loginWithUser === 'function') {
+        authStore.loginWithUser(
+          {
+            id: user._id || user.id || '',
+            name: user.name,
+            email: user.email || '',
+            role: user.role as 'student' | 'instructor' | 'admin',
+            googleId: (user as any).googleId,
+            xp: (user as any).xp,
+            badges: (user as any).badges,
+          },
+          token
+        );
+      }
+
+      // Redirect to appropriate dashboard after login based on user role
+      redirectByRole(user.role);
     } catch (error: any) {
-      // Handle login errors
-      const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
+      // Display error messages for invalid credentials or signup errors
+      let errorMessage = 'Login failed. Please check your credentials and try again.';
+      
+      if (error.isNetworkError) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.status === 401) {
+        errorMessage = error.message || 'Invalid email or password. Please try again.';
+      } else if (error.status === 400) {
+        errorMessage = error.message || 'Invalid input. Please check your email and password.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setErrors({
         general: errorMessage,
       });
@@ -141,31 +249,39 @@ function LoginPage() {
 
   /**
    * Handle Google login
+   * Redirects to backend Google OAuth endpoint
+   * After successful login, backend redirects to /dashboard with JWT token
    */
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setIsGoogleLoading(true);
     setErrors({});
+    
     try {
-      await loginWithGoogle();
-      // Set flag to trigger redirect via useEffect
-      setShouldRedirect(true);
+      // Get backend API URL from environment or use default
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const googleAuthUrl = `${apiUrl}/auth/google`;
+      
+      // Store current path for redirect after OAuth
+      const currentPath = searchParams.get('redirect') || window.location.pathname;
+      const redirectUrl = currentPath !== '/' ? currentPath : '/dashboard';
+      
+      // Redirect to backend Google OAuth endpoint
+      // Backend will handle OAuth flow and redirect back to frontend with token
+      window.location.href = `${googleAuthUrl}?redirect=${encodeURIComponent(redirectUrl)}`;
     } catch (error: any) {
-      const errorMessage = error.message || 'Google login failed. Please try again.';
+      // Display error messages for Google OAuth errors
+      let errorMessage = 'Google login failed. Please try again.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
       setErrors({
         general: errorMessage,
       });
       setIsGoogleLoading(false);
     }
   };
-
-  // Show auth error if present
-  useEffect(() => {
-    if (authError) {
-      setErrors({
-        general: authError,
-      });
-    }
-  }, [authError]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-light-sand via-soft-white to-light-sand">
@@ -210,8 +326,8 @@ function LoginPage() {
               <GoogleLoginButton
                 text="Continue with Google"
                 onClick={handleGoogleLogin}
-                disabled={isSubmitting || isLoading}
-                isLoading={isGoogleLoading || isLoading}
+                disabled={isSubmitting || isGoogleLoading}
+                isLoading={isGoogleLoading}
               />
             </div>
 
@@ -238,6 +354,7 @@ function LoginPage() {
                   type="email"
                   id="email"
                   name="email"
+                  data-testid="email-input"
                   value={formData.email}
                   onChange={handleChange}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
@@ -246,7 +363,7 @@ function LoginPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your email"
-                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  disabled={isSubmitting || isGoogleLoading}
                   required
                 />
                 {errors.email && (
@@ -266,6 +383,7 @@ function LoginPage() {
                   type="password"
                   id="password"
                   name="password"
+                  data-testid="password-input"
                   value={formData.password}
                   onChange={handleChange}
                   className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
@@ -274,7 +392,7 @@ function LoginPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your password"
-                  disabled={isSubmitting || isLoading || isGoogleLoading}
+                  disabled={isSubmitting || isGoogleLoading}
                   required
                 />
                 {errors.password && (
@@ -285,14 +403,15 @@ function LoginPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting || isLoading || isGoogleLoading}
+                data-testid="login-submit"
+                disabled={isSubmitting || isGoogleLoading}
                 className={`w-full px-6 py-4 bg-forest-green text-soft-white rounded-lg font-playful text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl ${
-                  isSubmitting || isLoading || isGoogleLoading
+                  isSubmitting || isGoogleLoading
                     ? 'opacity-50 cursor-not-allowed hover:scale-100'
                     : 'hover:bg-forest-green/90 hover:shadow-2xl animate-motion-subtle'
                 }`}
               >
-                {isSubmitting || isLoading ? (
+                {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <svg
                       className="animate-spin h-5 w-5"

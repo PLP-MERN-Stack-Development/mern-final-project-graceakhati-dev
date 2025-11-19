@@ -1,28 +1,28 @@
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import ImageLoader from '@/components/ImageLoader';
 import CourseCard from '@/components/CourseCard';
-import { useCourseStore, Course } from '@/store/useCourseStore';
-import { useAuth } from '@/hooks/useAuth';
+import ProtectedLink from '@/components/auth/ProtectedLink';
+import { useAuthStore } from '@/store/useAuthStore';
+import courseService, { Course } from '@/services/courseService';
 import {
   dashboardAvatars,
   dashboardBadges,
 } from '@/utils/imagePaths';
 
-/**
- * Map Course level to CourseCard level type
- */
-const mapLevelToCourseCardLevel = (
-  level: 'Beginner' | 'Intermediate' | 'Expert'
-): 'Beginner' | 'Intermediate' | 'Advanced' => {
-  if (level === 'Expert') return 'Advanced';
-  return level;
-};
 
 /**
  * Course Card with Enroll Button Component
  */
 interface EnrollableCourseCardProps {
-  course: Course;
+  course: {
+    id: string;
+    title: string;
+    description?: string;
+    image?: string;
+    level?: 'Beginner' | 'Intermediate' | 'Advanced';
+    tags?: string[];
+    price?: number;
+  };
   isEnrolled: boolean;
   onEnroll: (courseId: string) => void;
 }
@@ -41,7 +41,7 @@ function EnrollableCourseCard({ course, isEnrolled, onEnroll }: EnrollableCourse
         title={course.title}
         description={course.description}
         image={course.image}
-        level={mapLevelToCourseCardLevel(course.level)}
+        level={course.level || 'Beginner'}
         tags={course.tags}
         price={course.price}
       />
@@ -49,6 +49,7 @@ function EnrollableCourseCard({ course, isEnrolled, onEnroll }: EnrollableCourse
         <div className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center z-10">
           <button
             onClick={handleEnrollClick}
+            data-testid={`enroll-btn-${course.id}`}
             className="px-6 py-3 bg-planet-green-dark text-white rounded-lg font-semibold hover:bg-planet-green-dark/90 transition-all duration-200 transform hover:scale-105 shadow-lg"
             aria-label={`Enroll in ${course.title}`}
           >
@@ -68,39 +69,142 @@ function EnrollableCourseCard({ course, isEnrolled, onEnroll }: EnrollableCourse
 }
 
 function StudentDashboard() {
-  const { user } = useAuth();
-  const { courses, getEnrolledCourses, isEnrolled, enrollCourse } = useCourseStore();
+  const { user } = useAuthStore();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get enrolled courses for the current user
-  const enrolledCourses = user ? getEnrolledCourses(user.id) : [];
-  
-  // Get approved courses only (students should not see pending courses)
-  const availableCourses = courses.filter((course) => course.status === 'approved');
+  // Load courses and enrollment data - SECURITY: Only after authentication
+  useEffect(() => {
+    const loadData = async () => {
+      // SECURITY: Verify authentication before making API calls
+      if (!user) {
+        setIsLoading(false);
+        setError('Authentication required');
+        return;
+      }
 
-  // Calculate progress (mock calculation - in production, this would come from backend)
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Load all published courses
+        const coursesData = await courseService.getCourses({ status: 'published' });
+        setCourses(coursesData.courses || []);
+
+        // Load user's enrollments
+        // For MVP, we'll check enrollment status for each course
+        const enrolled: Course[] = [];
+        for (const course of coursesData.courses || []) {
+          const courseId = course._id || course.id || '';
+          if (courseId) {
+            try {
+              const isEnrolled = await courseService.checkEnrollment(courseId);
+              if (isEnrolled) {
+                enrolled.push(course);
+              }
+            } catch (err: any) {
+              // Handle authentication errors
+              if (err.code === 'AUTH_REQUIRED' || err.response?.status === 401) {
+                setError('Authentication required');
+                return;
+              }
+              // Continue with other courses if one fails
+            }
+          }
+        }
+        setEnrolledCourses(enrolled);
+      } catch (err: any) {
+        // Handle authentication errors
+        if (err.code === 'AUTH_REQUIRED' || err.response?.status === 401) {
+          setError('Authentication required. Please log in again.');
+        } else {
+          setError(err.message || 'Failed to load courses');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  // Calculate progress
   const overallProgress = enrolledCourses.length > 0 
-    ? Math.min(100, Math.round((enrolledCourses.length / Math.max(availableCourses.length, 1)) * 100))
+    ? Math.min(100, Math.round((enrolledCourses.length / Math.max(courses.length, 1)) * 100))
     : 0;
 
   /**
    * Handle course enrollment
    */
-  const handleEnroll = (courseId: string) => {
+  const handleEnroll = async (courseId: string) => {
     if (!user) {
       alert('Please log in to enroll in courses');
       return;
     }
 
-    if (isEnrolled(courseId, user.id)) {
-      alert('You are already enrolled in this course');
-      return;
+    try {
+      await courseService.enroll(courseId);
+      // Reload courses to update enrollment status
+      const coursesData = await courseService.getCourses({ status: 'published' });
+      setCourses(coursesData.courses || []);
+      
+      // Check enrollment status again
+      const enrolled: Course[] = [];
+      for (const course of coursesData.courses || []) {
+        const id = course._id || course.id || '';
+        if (id) {
+          const isEnrolled = await courseService.checkEnrollment(id);
+          if (isEnrolled) {
+            enrolled.push(course);
+          }
+        }
+      }
+      setEnrolledCourses(enrolled);
+    } catch (err: any) {
+      alert(err.message || 'Failed to enroll in course');
     }
-
-    enrollCourse(courseId, user.id);
   };
 
   // Get user avatar (default if not specified)
   const userAvatar = dashboardAvatars.default;
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <div className="mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-lg max-w-md mx-auto">
+            <p className="text-red-600 font-semibold">Failed to load dashboard</p>
+            <p className="text-red-500 text-sm mt-2">{error}</p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Get available courses (not enrolled)
+  const availableCourses = courses.filter((course) => {
+    const courseId = course._id || course.id || '';
+    return !enrolledCourses.some((enrolled) => (enrolled._id || enrolled.id) === courseId);
+  });
 
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in">
@@ -177,22 +281,25 @@ function StudentDashboard() {
             Continue Learning
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {enrolledCourses.map((course) => (
-              <div
-                key={course.id}
-                className="transform hover:scale-105 transition-transform duration-300"
-              >
-                <CourseCard
-                  id={course.id}
-                  title={course.title}
-                  description={course.description}
-                  image={course.image}
-                  level={mapLevelToCourseCardLevel(course.level)}
-                  tags={course.tags}
-                  price={course.price}
-                />
-              </div>
-            ))}
+            {enrolledCourses.map((course) => {
+              const courseId = course._id || course.id || '';
+              return (
+                <div
+                  key={courseId}
+                  className="transform hover:scale-105 transition-transform duration-300"
+                >
+                  <CourseCard
+                    id={courseId}
+                    title={course.title}
+                    description={course.description}
+                    image={undefined}
+                    level={course.tags?.includes('beginner') ? 'Beginner' : course.tags?.includes('advanced') ? 'Advanced' : 'Intermediate'}
+                    tags={course.tags}
+                    price={course.price}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -223,15 +330,23 @@ function StudentDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {availableCourses.map((course) => {
-              const enrolled = user ? isEnrolled(course.id, user.id) : false;
+              const courseId = course._id || course.id || '';
               return (
                 <div
-                  key={course.id}
+                  key={courseId}
                   className="transform hover:scale-105 transition-transform duration-300"
                 >
                   <EnrollableCourseCard
-                    course={course}
-                    isEnrolled={enrolled}
+                    course={{
+                      id: courseId,
+                      title: course.title,
+                      description: course.description,
+                      image: undefined,
+                      level: course.tags?.includes('beginner') ? 'Beginner' : course.tags?.includes('advanced') ? 'Advanced' : 'Intermediate',
+                      tags: course.tags,
+                      price: course.price,
+                    }}
+                    isEnrolled={false}
                     onEnroll={handleEnroll}
                   />
                 </div>
@@ -298,12 +413,12 @@ function StudentDashboard() {
                   ></div>
                 </div>
               </div>
-              <Link
+              <ProtectedLink
                 to="/projects"
                 className="block w-full mt-4 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all duration-200 transform hover:scale-105 text-center"
               >
                 Continue Project
-              </Link>
+              </ProtectedLink>
             </div>
 
             {/* Project Card 2 */}
@@ -329,12 +444,12 @@ function StudentDashboard() {
                   ></div>
                 </div>
               </div>
-              <Link
+              <ProtectedLink
                 to="/projects"
                 className="block w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 transform hover:scale-105 text-center"
               >
                 Continue Project
-              </Link>
+              </ProtectedLink>
             </div>
           </div>
         </div>

@@ -78,6 +78,10 @@ function ImageLoader({
     } else {
       // Fallback also failed, show placeholder
       setIsLoaded(true);
+      // Suppress console warnings for missing images in production
+      if (import.meta.env.PROD) {
+        // Silently handle image load errors in production
+      }
     }
   };
 

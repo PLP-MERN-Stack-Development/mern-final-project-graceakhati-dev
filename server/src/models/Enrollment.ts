@@ -4,6 +4,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
  * Enrollment Document Interface
  */
 export interface IEnrollment extends Document {
+  _id: Types.ObjectId;
   userId: Types.ObjectId;
   courseId: Types.ObjectId;
   enrolledAt: Date;
