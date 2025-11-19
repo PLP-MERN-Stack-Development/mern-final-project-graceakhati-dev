@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Layout from './components/layout/Layout';
-import ProtectedRoute from './components/auth/ProtectedRoute';
-import ErrorBoundary from './components/ErrorBoundary';
-import ErrorPage from './components/ErrorPage';
+import Layout from './components/layout/layout';
+import ProtectedRoute from './components/auth/protectedroute';
+import ErrorBoundary from './components/errorboundary';
+import ErrorPage from './components/errorpage';
 import Landing from './pages/Landing';
 import Catalog from './pages/Catalog';
 import Login from './pages/auth/Login';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import ImageLoader from '@/components/ImageLoader';
-import CourseCard from '@/components/CourseCard';
-import ProtectedLink from '@/components/auth/ProtectedLink';
+import ImageLoader from '@/components/imageloader';
+import CourseCard from '@/components/coursecard';
+import ProtectedLink from '@/components/auth/protectedlink';
 import { useAuthStore } from '@/store/useAuthStore';
 import courseService, { Course } from '@/services/courseService';
 import {

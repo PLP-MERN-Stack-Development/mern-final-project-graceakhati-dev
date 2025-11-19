@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import CourseCard from '@/components/CourseCard';
-import EmptyState from '@/components/EmptyState';
+import CourseCard from '@/components/coursecard';
+import EmptyState from '@/components/emptystate';
 import { courseIcons } from '@/utils/imagePaths';
 
 // Course data with icon mapping

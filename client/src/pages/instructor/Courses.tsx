@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import ProtectedLink from '@/components/auth/ProtectedLink';
+import ProtectedLink from '@/components/auth/protectedlink';
 import { useCourseStore } from '@/store/useCourseStore';
-import CourseCard from '@/components/CourseCard';
+import CourseCard from '@/components/coursecard';
 import { courseIcons } from '@/utils/imagePaths';
-import EmptyState from '@/components/EmptyState';
+import EmptyState from '@/components/emptystate';
 
 function InstructorCourses() {
   const { courses, pending } = useCourseStore();

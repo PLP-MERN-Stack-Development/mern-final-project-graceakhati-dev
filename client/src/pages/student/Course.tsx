@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ImageLoader from '@/components/ImageLoader';
+import ImageLoader from '@/components/imageloader';
 import { uiIllustrations } from '@/utils/imagePaths';
 
 function CoursePlayer() {

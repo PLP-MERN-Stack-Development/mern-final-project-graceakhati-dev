@@ -1,8 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCourseStore } from '@/store/useCourseStore';
-import Card from '@/components/Card';
-import Button from '@/components/Button';
+import Card from '@/components/card';
+import Button from '@/components/button';
 
 function CreateCourse() {
   const navigate = useNavigate();

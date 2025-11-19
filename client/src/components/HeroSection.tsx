@@ -1,5 +1,5 @@
-import ProtectedLink from './auth/ProtectedLink';
-import ImageLoader from './ImageLoader';
+import ProtectedLink from './auth/protectedlink';
+import ImageLoader from './imageloader';
 import { heroImages } from '@/utils/imagePaths';
 
 /**

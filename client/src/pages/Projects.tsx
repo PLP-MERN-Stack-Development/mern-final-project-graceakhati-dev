@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import ImageLoader from '@/components/ImageLoader';
-import EmptyState from '@/components/EmptyState';
+import ImageLoader from '@/components/imageloader';
+import EmptyState from '@/components/emptystate';
 import { projectImages } from '@/utils/imagePaths';
 
 interface Project {

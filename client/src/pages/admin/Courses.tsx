@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useCourseStore } from '@/store/useCourseStore';
-import CourseCard from '@/components/CourseCard';
+import CourseCard from '@/components/coursecard';
 import { courseIcons } from '@/utils/imagePaths';
-import EmptyState from '@/components/EmptyState';
+import EmptyState from '@/components/emptystate';
 
 function AdminCourses() {
   const { courses, pending, approveCourse, rejectCourse } = useCourseStore();

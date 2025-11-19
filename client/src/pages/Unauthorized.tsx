@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ImageLoader from '@/components/ImageLoader';
+import ImageLoader from '@/components/imageloader';
 import { useAuth } from '@/hooks/useAuth';
 import { uiIllustrations } from '@/utils/imagePaths';
 
