@@ -1,7 +1,5 @@
 import app from './app';
 import { connectDB } from './config/db';
-import { connectRedis } from './services/redis.service';
-import { initializeQueue, initializeWorker } from './worker/badgeWorker';
 
 /**
  * Server Configuration
@@ -17,15 +15,25 @@ const startServer = async (): Promise<void> => {
     // Connect to MongoDB
     await connectDB();
 
-    // Connect to Redis (if configured)
-    try {
-      await connectRedis();
-      
-      // Initialize BullMQ queue and worker
-      initializeQueue();
-      initializeWorker();
-    } catch (redisError) {
-      console.warn('⚠️  Redis not available, queue/worker features disabled:', (redisError as Error).message);
+    // Redis is optional - only initialize if explicitly enabled
+    const enableRedis = process.env.ENABLE_REDIS === 'true';
+    if (enableRedis) {
+      try {
+        const { connectRedis } = await import('./services/redis.service');
+        const redisClient = await connectRedis();
+        
+        if (redisClient) {
+          // Initialize BullMQ queue and worker only if Redis is connected
+          const { initializeQueue, initializeWorker } = await import('./worker/badgeWorker');
+          initializeQueue();
+          initializeWorker();
+          console.log('✅ Redis and background workers enabled');
+        }
+      } catch (redisError) {
+        console.warn('⚠️  Redis initialization failed, continuing without Redis:', (redisError as Error).message);
+      }
+    } else {
+      console.log('ℹ️  Redis disabled (set ENABLE_REDIS=true to enable)');
     }
 
     // Start Express server

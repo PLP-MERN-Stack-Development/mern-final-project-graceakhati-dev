@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import ProtectedLink from './auth/ProtectedLink';
 import ImageLoader from './ImageLoader';
 import { heroImages } from '@/utils/imagePaths';
 
@@ -35,18 +35,18 @@ function HeroSection() {
               Join verified projects. Earn certificates. Build green skills for a sustainable future.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link
+              <ProtectedLink
                 to="/catalog"
                 className="px-8 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-center"
               >
                 Start Learning
-              </Link>
-              <Link
+              </ProtectedLink>
+              <ProtectedLink
                 to="/projects"
                 className="px-8 py-3 bg-white text-green-600 border-2 border-green-600 rounded-lg font-semibold hover:bg-green-50 transition-all duration-300 transform hover:scale-105 text-center"
               >
                 View Projects
-              </Link>
+              </ProtectedLink>
             </div>
           </div>
 

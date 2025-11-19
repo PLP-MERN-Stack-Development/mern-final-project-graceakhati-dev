@@ -1,290 +1,550 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import { useAuthStore } from '@/store/useAuthStore';
 
-// Mock useNavigate
-const mockNavigate = vi.fn();
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
+// Mock useAuthStore - Zustand store
+let mockStoreState: any = {
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: false,
+  role: null,
+};
+
+vi.mock('@/store/useAuthStore', () => {
+  return {
+    useAuthStore: vi.fn((selector?: any) => {
+      if (typeof selector === 'function') {
+        return selector(mockStoreState);
+      }
+      return mockStoreState;
+    }),
+  };
+});
+
+// Add getState method to the mock
+(useAuthStore as any).getState = vi.fn(() => mockStoreState);
+
+// Mock react-router-dom Navigate
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    useNavigate: () => mockNavigate,
-    Navigate: ({ to }: { to: string }) => <div data-testid="navigate">{to}</div>,
+    Navigate: ({ to, dataTestId }: { to: string; dataTestId?: string }) => (
+      <div data-testid={dataTestId || 'navigate'}>Redirecting to {to}</div>
+    ),
   };
 });
 
-// Mock Zustand store
-vi.mock('@/store/useAuthStore', () => ({
-  useAuthStore: vi.fn(),
-}));
+const mockUseAuthStore = vi.mocked(useAuthStore);
 
-describe('ProtectedRoute (Zustand-based)', () => {
+describe('ProtectedRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Clear localStorage
     localStorage.clear();
+    // Reset mock store state
+    mockStoreState = {
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      role: null,
+    };
+    (useAuthStore.getState as any) = vi.fn(() => mockStoreState);
   });
 
-  describe('Unauthenticated User', () => {
-    it('should redirect to /login when user is not authenticated', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
+  const TestComponent = () => <div data-testid="test-content">Protected Content</div>;
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute>
-            <div>Protected Content</div>
-          </ProtectedRoute>
-        </MemoryRouter>
-      );
+  const renderWithRouter = (component: React.ReactElement, initialEntries: string[] = ['/test']) => {
+    return render(
+      <MemoryRouter initialEntries={initialEntries}>
+        {component}
+      </MemoryRouter>
+    );
+  };
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/login');
-    });
-
-    it('should show loading state while checking authentication', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+  describe('Loading State', () => {
+    it('should show loading when isLoading is true', () => {
+      mockStoreState = {
         user: null,
         token: null,
         isAuthenticated: false,
         isLoading: true,
-      });
+        role: null,
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute>
-            <div>Protected Content</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.getByTestId('protected-route-loading')).toBeInTheDocument();
+      expect(screen.queryByTestId('test-content')).not.toBeInTheDocument();
+    });
+
+    it('should show loading when checking auth from localStorage', () => {
+      mockStoreState = {
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        role: null,
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
+
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
+      );
+
+      // Initially shows loading while checking localStorage
+      expect(screen.getByTestId('protected-route-loading')).toBeInTheDocument();
     });
   });
 
-  describe('Authenticated User - No Role Restrictions', () => {
-    it('should render children when user is authenticated and no roles specified', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-1', name: 'John Doe', role: 'student' },
-        token: 'token123',
-        isAuthenticated: true,
+  describe('Unauthenticated Access', () => {
+    it('should redirect to login when not authenticated', async () => {
+      mockStoreState = {
+        user: null,
+        token: null,
+        isAuthenticated: false,
         isLoading: false,
-      });
+        role: null,
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute>
-            <div>Protected Content</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-login')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('test-content')).not.toBeInTheDocument();
+    });
+
+    it('should redirect to login when no token in localStorage', async () => {
+      mockStoreState = {
+        user: { id: 'user1', name: 'Test', role: 'student' },
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
+      localStorage.clear();
+
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-login')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Authenticated Access - No Role Restriction', () => {
+    it('should render children when authenticated and no allowedRoles specified', async () => {
+      const mockUser = { id: 'user1', name: 'Test User', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        isLoading: false,
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
+
+      // Set localStorage to match
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('test-content')).toBeInTheDocument();
+      });
+
       expect(screen.getByText('Protected Content')).toBeInTheDocument();
+      expect(screen.queryByTestId('protected-route-redirect-login')).not.toBeInTheDocument();
+    });
+
+    it('should render children when allowedRoles is empty array', async () => {
+      const mockUser = { id: 'user1', name: 'Test User', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        isLoading: false,
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
+
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={[]}>
+          <TestComponent />
+        </ProtectedRoute>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('test-content')).toBeInTheDocument();
+      });
     });
   });
 
   describe('Role-Based Access Control', () => {
-    it('should allow student to access student-only routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-1', name: 'John Doe', role: 'student' },
-        token: 'token123',
+    it('should allow access when user role matches allowedRoles', async () => {
+      const mockUser = { id: 'user1', name: 'Student', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['student']}>
-            <div>Student Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['student']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      expect(screen.getByText('Student Dashboard')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('test-content')).toBeInTheDocument();
+      });
     });
 
-    it('should redirect student when trying to access admin routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-1', name: 'John Doe', role: 'student' },
-        token: 'token123',
+    it('should allow access when user role is in multiple allowedRoles', async () => {
+      const mockUser = { id: 'user1', name: 'Instructor', role: 'instructor' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'instructor',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['admin']}>
-            <div>Admin Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'instructor',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['student', 'instructor']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/unauthorized');
+      await waitFor(() => {
+        expect(screen.getByTestId('test-content')).toBeInTheDocument();
+      });
     });
 
-    it('should redirect student when trying to access instructor routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-1', name: 'John Doe', role: 'student' },
-        token: 'token123',
+    it('should redirect to unauthorized when user role does not match', async () => {
+      const mockUser = { id: 'user1', name: 'Student', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['instructor']}>
-            <div>Instructor Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['admin']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/unauthorized');
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-unauthorized')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('test-content')).not.toBeInTheDocument();
     });
 
-    it('should allow instructor to access instructor routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-2', name: 'Jane Smith', role: 'instructor' },
-        token: 'token456',
+    it('should allow admin access to admin-only routes', async () => {
+      const mockUser = { id: 'user1', name: 'Admin', role: 'admin' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'admin',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['instructor']}>
-            <div>Instructor Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'admin',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['admin']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      expect(screen.getByText('Instructor Dashboard')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('test-content')).toBeInTheDocument();
+      });
     });
 
-    it('should redirect instructor when trying to access student routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-2', name: 'Jane Smith', role: 'instructor' },
-        token: 'token456',
+    it('should allow instructor access to instructor-only routes', async () => {
+      const mockUser = { id: 'user1', name: 'Instructor', role: 'instructor' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'instructor',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['student']}>
-            <div>Student Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'instructor',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['instructor']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/unauthorized');
+      await waitFor(() => {
+        expect(screen.getByTestId('test-content')).toBeInTheDocument();
+      });
     });
 
-    it('should redirect instructor when trying to access admin routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-2', name: 'Jane Smith', role: 'instructor' },
-        token: 'token456',
+    it('should block student from accessing instructor routes', async () => {
+      const mockUser = { id: 'user1', name: 'Student', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['admin']}>
-            <div>Admin Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['instructor']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/unauthorized');
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-unauthorized')).toBeInTheDocument();
+      });
     });
 
-    it('should allow admin to access admin routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-3', name: 'Admin User', role: 'admin' },
-        token: 'token789',
+    it('should block student from accessing admin routes', async () => {
+      const mockUser = { id: 'user1', name: 'Student', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['admin']}>
-            <div>Admin Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute allowedRoles={['admin']}>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      expect(screen.getByText('Admin Dashboard')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-unauthorized')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle user being null even when isAuthenticated is true', async () => {
+      mockStoreState = {
+        user: null,
+        token: 'token',
+        isAuthenticated: true,
+        isLoading: false,
+        role: null,
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
+
+      // No token in localStorage
+      localStorage.clear();
+
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-login')).toBeInTheDocument();
+      });
     });
 
-    it('should redirect admin when trying to access student routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-3', name: 'Admin User', role: 'admin' },
-        token: 'token789',
+    it('should handle multiple children components', async () => {
+      const mockUser = { id: 'user1', name: 'Test', role: 'student' as const };
+      const mockToken = 'token123';
+
+      mockStoreState = {
+        user: mockUser,
+        token: mockToken,
         isAuthenticated: true,
         isLoading: false,
-      });
+        role: 'student',
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['student']}>
-            <div>Student Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      localStorage.setItem('planet-path-auth-storage', JSON.stringify({
+        user: mockUser,
+        token: mockToken,
+        isAuthenticated: true,
+        role: 'student',
+      }));
+
+      renderWithRouter(
+        <ProtectedRoute>
+          <div>Child 1</div>
+          <div>Child 2</div>
+        </ProtectedRoute>
       );
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/unauthorized');
+      await waitFor(() => {
+        expect(screen.getByText('Child 1')).toBeInTheDocument();
+        expect(screen.getByText('Child 2')).toBeInTheDocument();
+      });
     });
 
-    it('should redirect admin when trying to access instructor routes', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-3', name: 'Admin User', role: 'admin' },
-        token: 'token789',
-        isAuthenticated: true,
+    it('should handle corrupted localStorage data gracefully', async () => {
+      mockStoreState = {
+        user: null,
+        token: null,
+        isAuthenticated: false,
         isLoading: false,
-      });
+        role: null,
+      };
+      mockUseAuthStore.mockReturnValue(mockStoreState as any);
 
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['instructor']}>
-            <div>Instructor Dashboard</div>
-          </ProtectedRoute>
-        </MemoryRouter>
+      // Set invalid JSON in localStorage
+      localStorage.setItem('planet-path-auth-storage', 'invalid-json');
+
+      renderWithRouter(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
       );
 
-      const navigate = screen.getByTestId('navigate');
-      expect(navigate).toHaveTextContent('/unauthorized');
-    });
-
-    it('should allow access when user role is in multiple allowed roles', () => {
-      (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-        user: { id: 'u-1', name: 'John Doe', role: 'student' },
-        token: 'token123',
-        isAuthenticated: true,
-        isLoading: false,
+      await waitFor(() => {
+        expect(screen.getByTestId('protected-route-redirect-login')).toBeInTheDocument();
       });
-
-      render(
-        <MemoryRouter>
-          <ProtectedRoute allowedRoles={['student', 'instructor']}>
-            <div>Shared Content</div>
-          </ProtectedRoute>
-        </MemoryRouter>
-      );
-
-      expect(screen.getByText('Shared Content')).toBeInTheDocument();
     });
   });
 });
-

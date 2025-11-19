@@ -1,12 +1,6 @@
 import { useState, useCallback } from 'react';
 import authService from '@/services/authService';
-import { useAuthStore } from '@/store/useAuthStore';
-
-interface AuthUser {
-  id: string;
-  name: string;
-  role: string;
-}
+import { useAuthStore, UserRole } from '@/store/useAuthStore';
 
 /**
  * React hook for authentication operations
@@ -31,7 +25,11 @@ export function useAuthService() {
         {
           id: user._id || user.id || '',
           name: user.name,
-          role: user.role,
+          email: user.email || '',
+          role: user.role as UserRole,
+          googleId: (user as any).googleId,
+          xp: (user as any).xp,
+          badges: (user as any).badges,
         },
         token
       );
@@ -49,7 +47,7 @@ export function useAuthService() {
   /**
    * Sign up a new user
    */
-  const signup = useCallback(async (name: string, email: string, password: string, role: string = 'student') => {
+  const signup = useCallback(async (name: string, email: string, password: string, role: UserRole = 'student') => {
     setIsLoading(true);
     setError(null);
     try {
@@ -60,7 +58,11 @@ export function useAuthService() {
         {
           id: user._id || user.id || '',
           name: user.name,
-          role: user.role,
+          email: user.email || '',
+          role: user.role as UserRole,
+          googleId: (user as any).googleId,
+          xp: (user as any).xp,
+          badges: (user as any).badges,
         },
         token
       );
@@ -89,7 +91,11 @@ export function useAuthService() {
         {
           id: user._id || user.id || '',
           name: user.name,
-          role: user.role,
+          email: user.email || '',
+          role: user.role as UserRole,
+          googleId: (user as any).googleId,
+          xp: (user as any).xp,
+          badges: (user as any).badges,
         },
         token
       );
@@ -120,7 +126,11 @@ export function useAuthService() {
           {
             id: user._id || user.id || '',
             name: user.name,
-            role: user.role,
+            email: user.email || '',
+            role: user.role as UserRole,
+            googleId: (user as any).googleId,
+            xp: (user as any).xp,
+            badges: (user as any).badges,
           },
           useAuthStore.getState().token || ''
         );

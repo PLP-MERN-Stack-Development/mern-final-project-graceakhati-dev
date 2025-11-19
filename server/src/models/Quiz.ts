@@ -21,6 +21,7 @@ export interface IQuizQuestion {
  * Quiz Document Interface
  */
 export interface IQuiz extends Document {
+  _id: Types.ObjectId;
   title: string;
   lessonId: Types.ObjectId;
   questions: IQuizQuestion[];

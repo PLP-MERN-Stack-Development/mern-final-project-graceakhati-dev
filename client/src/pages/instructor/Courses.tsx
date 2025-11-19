@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import ProtectedLink from '@/components/auth/ProtectedLink';
 import { useCourseStore } from '@/store/useCourseStore';
 import CourseCard from '@/components/CourseCard';
 import { courseIcons } from '@/utils/imagePaths';
@@ -32,12 +33,13 @@ function InstructorCourses() {
               Manage your courses and track their status
             </p>
           </div>
-          <Link
+          <ProtectedLink
             to="/instructor/create-course"
+            allowedRoles={['instructor', 'admin']}
             className="px-6 py-3 bg-forest-green text-soft-white rounded-lg font-playful font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl self-start md:self-auto"
           >
             + Create New Course
-          </Link>
+          </ProtectedLink>
         </div>
 
         {/* Tabs */}

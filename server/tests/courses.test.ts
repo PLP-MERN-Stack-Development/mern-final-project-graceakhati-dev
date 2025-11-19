@@ -1,9 +1,32 @@
 /**
  * Courses API Integration Tests
  * 
- * Tests for:
+ * Comprehensive tests for:
  * - GET /api/courses (public)
+ *   - Successful retrieval
+ *   - Filtering and pagination
+ * - GET /api/courses/:id (public)
+ *   - Successful retrieval by ID
+ *   - Successful retrieval by slug
+ *   - Course not found
  * - POST /api/courses (protected, instructor/admin only)
+ *   - Successful creation
+ *   - Validation errors
+ *   - Unauthorized access
+ *   - Forbidden access (student)
+ * - PUT /api/courses/:id (protected, author/instructor/admin)
+ *   - Successful update by author
+ *   - Successful update by instructor/admin
+ *   - Validation errors
+ *   - Unauthorized access
+ *   - Forbidden access (non-author student)
+ *   - Course not found
+ * - DELETE /api/courses/:id (protected, author/instructor/admin)
+ *   - Successful deletion by author
+ *   - Successful deletion by instructor/admin
+ *   - Unauthorized access
+ *   - Forbidden access (non-author student)
+ *   - Course not found
  */
 
 import request from 'supertest';
@@ -394,6 +417,469 @@ describe('Courses API', () => {
         .set('Authorization', `Bearer ${instructorToken}`)
         .send(courseData)
         .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('GET /api/courses/:id', () => {
+    let courseId: string;
+    let courseSlug: string;
+
+    beforeEach(async () => {
+      const course = await Course.create({
+        title: 'Test Course for Get',
+        slug: 'test-course-for-get',
+        description: 'This is a test course for GET endpoint',
+        authorId: instructorId,
+        modules: [],
+        tags: ['test'],
+        price: 0,
+        impact_type: 'climate',
+        status: 'published',
+      });
+      courseId = (course._id as mongoose.Types.ObjectId).toString();
+      courseSlug = course.slug;
+    });
+
+    it('should get course by ID successfully', async () => {
+      const response = await request(app)
+        .get(`/api/courses/${courseId}`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('data');
+      expect(response.body.data).toHaveProperty('course');
+      expect(response.body.data.course).toHaveProperty('_id', courseId);
+      expect(response.body.data.course).toHaveProperty('title', 'Test Course for Get');
+      expect(response.body.data.course).toHaveProperty('slug', courseSlug);
+    });
+
+    it('should get course by slug successfully', async () => {
+      const response = await request(app)
+        .get(`/api/courses/${courseSlug}`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body.data.course).toHaveProperty('slug', courseSlug);
+    });
+
+    it('should return 404 for non-existent course ID', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const response = await request(app)
+        .get(`/api/courses/${fakeId}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found');
+    });
+
+    it('should return 404 for non-existent slug', async () => {
+      const response = await request(app)
+        .get('/api/courses/non-existent-slug')
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found');
+    });
+  });
+
+  describe('PUT /api/courses/:id', () => {
+    let courseId: string;
+    let otherInstructorId: string;
+    let otherInstructorToken: string;
+
+    beforeEach(async () => {
+      // Create a course owned by the instructor
+      const course = await Course.create({
+        title: 'Course to Update',
+        slug: 'course-to-update',
+        description: 'This course will be updated',
+        authorId: instructorId,
+        modules: [],
+        tags: ['test'],
+        price: 0,
+        impact_type: 'climate',
+        status: 'draft',
+      });
+      courseId = (course._id as mongoose.Types.ObjectId).toString();
+
+      // Create another instructor for testing
+      const otherInstructor = await User.create({
+        name: 'Other Instructor',
+        email: 'other-instructor@example.com',
+        password: 'password123',
+        role: 'instructor',
+      });
+      otherInstructorId = (otherInstructor._id as mongoose.Types.ObjectId).toString();
+
+      const jwtSecret = process.env.JWT_SECRET || 'test-secret-key';
+      const jwtExpire = process.env.JWT_EXPIRE || '7d';
+      otherInstructorToken = jwt.sign(
+        { userId: otherInstructorId, email: 'other-instructor@example.com', role: 'instructor' },
+        jwtSecret,
+        { expiresIn: jwtExpire } as jwt.SignOptions
+      );
+    });
+
+    it('should update course successfully by author', async () => {
+      const updateData = {
+        title: 'Updated Course Title',
+        description: 'This course has been updated',
+        status: 'published',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('message', 'Course updated successfully');
+      expect(response.body.data.course).toHaveProperty('title', updateData.title);
+      expect(response.body.data.course).toHaveProperty('description', updateData.description);
+      expect(response.body.data.course).toHaveProperty('status', updateData.status);
+
+      // Verify course was updated in database
+      const updatedCourse = await Course.findById(courseId);
+      expect(updatedCourse?.title).toBe(updateData.title);
+      expect(updatedCourse?.status).toBe(updateData.status);
+    });
+
+    it('should update course successfully by admin', async () => {
+      const updateData = {
+        title: 'Updated by Admin',
+        description: 'Updated by admin user',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.course).toHaveProperty('title', updateData.title);
+    });
+
+    it('should update course successfully by other instructor (admin privilege)', async () => {
+      const updateData = {
+        title: 'Updated by Other Instructor',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${otherInstructorToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.course).toHaveProperty('title', updateData.title);
+    });
+
+    it('should return 401 without authentication token', async () => {
+      const updateData = {
+        title: 'Unauthorized Update',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .send(updateData)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 403 for student trying to update course', async () => {
+      const updateData = {
+        title: 'Student Update Attempt',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send(updateData)
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toMatch(/permission|access denied/i);
+    });
+
+    it('should return 404 for non-existent course', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const updateData = {
+        title: 'Update Non-existent',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${fakeId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found');
+    });
+
+    it('should return 400 for invalid course ID format', async () => {
+      const updateData = {
+        title: 'Invalid ID',
+      };
+
+      const response = await request(app)
+        .put('/api/courses/invalid-id-format')
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 400 for validation errors - short title', async () => {
+      const updateData = {
+        title: 'AB', // Too short (min 3 characters)
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('Validation failed');
+    });
+
+    it('should return 400 for validation errors - short description', async () => {
+      const updateData = {
+        description: 'Short', // Too short (min 10 characters)
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 400 for validation errors - negative price', async () => {
+      const updateData = {
+        price: -10,
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 400 for validation errors - invalid status', async () => {
+      const updateData = {
+        status: 'invalid-status',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 400 for validation errors - invalid impact_type', async () => {
+      const updateData = {
+        impact_type: 'invalid-type',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 401 for invalid token', async () => {
+      const updateData = {
+        title: 'Invalid Token Update',
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', 'Bearer invalid-token')
+        .send(updateData)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should allow partial updates', async () => {
+      const updateData = {
+        price: 99.99,
+      };
+
+      const response = await request(app)
+        .put(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.course).toHaveProperty('price', 99.99);
+      // Original title should remain unchanged
+      expect(response.body.data.course).toHaveProperty('title', 'Course to Update');
+    });
+  });
+
+  describe('DELETE /api/courses/:id', () => {
+    let courseId: string;
+    let otherInstructorId: string;
+    let otherInstructorToken: string;
+
+    beforeEach(async () => {
+      // Create a course owned by the instructor
+      const course = await Course.create({
+        title: 'Course to Delete',
+        slug: 'course-to-delete',
+        description: 'This course will be deleted',
+        authorId: instructorId,
+        modules: [],
+        tags: ['test'],
+        price: 0,
+        impact_type: 'climate',
+        status: 'draft',
+      });
+      courseId = (course._id as mongoose.Types.ObjectId).toString();
+
+      // Create another instructor for testing
+      const otherInstructor = await User.create({
+        name: 'Other Instructor',
+        email: 'other-instructor2@example.com',
+        password: 'password123',
+        role: 'instructor',
+      });
+      otherInstructorId = (otherInstructor._id as mongoose.Types.ObjectId).toString();
+
+      const jwtSecret = process.env.JWT_SECRET || 'test-secret-key';
+      const jwtExpire = process.env.JWT_EXPIRE || '7d';
+      otherInstructorToken = jwt.sign(
+        { userId: otherInstructorId, email: 'other-instructor2@example.com', role: 'instructor' },
+        jwtSecret,
+        { expiresIn: jwtExpire } as jwt.SignOptions
+      );
+    });
+
+    it('should delete course successfully by author', async () => {
+      const response = await request(app)
+        .delete(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('message', 'Course deleted successfully');
+
+      // Verify course was deleted from database
+      const deletedCourse = await Course.findById(courseId);
+      expect(deletedCourse).toBeNull();
+    });
+
+    it('should delete course successfully by admin', async () => {
+      // Create a new course for admin to delete
+      const course = await Course.create({
+        title: 'Course for Admin Delete',
+        slug: 'course-for-admin-delete',
+        description: 'This course will be deleted by admin',
+        authorId: instructorId,
+        modules: [],
+        tags: ['test'],
+        price: 0,
+        impact_type: 'climate',
+        status: 'draft',
+      });
+      const adminCourseId = (course._id as mongoose.Types.ObjectId).toString();
+
+      const response = await request(app)
+        .delete(`/api/courses/${adminCourseId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+
+      // Verify course was deleted
+      const deletedCourse = await Course.findById(adminCourseId);
+      expect(deletedCourse).toBeNull();
+    });
+
+    it('should delete course successfully by other instructor (admin privilege)', async () => {
+      // Create a new course for other instructor to delete
+      const course = await Course.create({
+        title: 'Course for Other Instructor Delete',
+        slug: 'course-for-other-instructor-delete',
+        description: 'This course will be deleted by other instructor',
+        authorId: instructorId,
+        modules: [],
+        tags: ['test'],
+        price: 0,
+        impact_type: 'climate',
+        status: 'draft',
+      });
+      const otherInstructorCourseId = (course._id as mongoose.Types.ObjectId).toString();
+
+      const response = await request(app)
+        .delete(`/api/courses/${otherInstructorCourseId}`)
+        .set('Authorization', `Bearer ${otherInstructorToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+
+      // Verify course was deleted
+      const deletedCourse = await Course.findById(otherInstructorCourseId);
+      expect(deletedCourse).toBeNull();
+    });
+
+    it('should return 401 without authentication token', async () => {
+      const response = await request(app)
+        .delete(`/api/courses/${courseId}`)
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should return 403 for student trying to delete course', async () => {
+      const response = await request(app)
+        .delete(`/api/courses/${courseId}`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toMatch(/permission|access denied/i);
+    });
+
+    it('should return 404 for non-existent course', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      const response = await request(app)
+        .delete(`/api/courses/${fakeId}`)
+        .set('Authorization', `Bearer ${instructorToken}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain('not found');
+    });
+
+    it('should return 401 for invalid token', async () => {
+      const response = await request(app)
+        .delete(`/api/courses/${courseId}`)
+        .set('Authorization', 'Bearer invalid-token')
+        .expect(401);
 
       expect(response.body.success).toBe(false);
     });

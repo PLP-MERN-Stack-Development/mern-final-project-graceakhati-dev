@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -65,7 +66,7 @@ export const generateCertificate = async (
     }
 
     // Check authorization: user can only generate for themselves unless admin/instructor
-    const requestingUserId = req.user._id?.toString();
+    const requestingUserId = req.user._id.toString();
     const isAdminOrInstructor = ['admin', 'instructor'].includes(req.user.role);
 
     if (userId !== requestingUserId && !isAdminOrInstructor) {
@@ -215,9 +216,31 @@ export const verifyCertificate = async (
     }
 
     // Recalculate hash
+    // certificate.userId and certificate.courseId are Types.ObjectId, safe to call toString()
+    // Handle optional fields with defaults
+    if (!certificate.certificateId) {
+      res.status(400).json({
+        success: false,
+        message: 'Certificate missing certificateId',
+        status: 'invalid',
+      });
+      return;
+    }
+    if (!certificate.impactSummary) {
+      res.status(400).json({
+        success: false,
+        message: 'Certificate missing impactSummary',
+        status: 'invalid',
+      });
+      return;
+    }
     const certificateData: CertificateData = {
-      userId: certificate.userId.toString(),
-      courseId: certificate.courseId.toString(),
+      userId: certificate.userId instanceof Types.ObjectId 
+        ? certificate.userId.toString() 
+        : String(certificate.userId),
+      courseId: certificate.courseId instanceof Types.ObjectId
+        ? certificate.courseId.toString()
+        : String(certificate.courseId),
       certificateId: certificate.certificateId,
       issuedAt: certificate.issuedAt.toISOString(),
       impactSummary: certificate.impactSummary,
@@ -309,62 +332,55 @@ async function generatePDFBuffer(data: {
       doc.fontSize(36)
         .fillColor('#16A34A')
         .font('Helvetica-Bold')
-        .text('CERTIFICATE OF COMPLETION', {
+        .text('CERTIFICATE OF COMPLETION', pageWidth / 2, pageHeight / 2 - 200, {
           align: 'center',
-          y: pageHeight / 2 - 200,
         });
 
       // Subtitle
       doc.fontSize(18)
         .fillColor('#15803D')
         .font('Helvetica')
-        .text('This is to certify that', {
+        .text('This is to certify that', pageWidth / 2, pageHeight / 2 - 130, {
           align: 'center',
-          y: pageHeight / 2 - 130,
         });
 
       // User Name
       doc.fontSize(32)
         .fillColor('#16A34A')
         .font('Helvetica-Bold')
-        .text(data.userName, {
+        .text(data.userName, pageWidth / 2, pageHeight / 2 - 90, {
           align: 'center',
-          y: pageHeight / 2 - 90,
         });
 
       // Course Title
       doc.fontSize(20)
         .fillColor('#15803D')
         .font('Helvetica')
-        .text('has successfully completed the course', {
+        .text('has successfully completed the course', pageWidth / 2, pageHeight / 2 - 30, {
           align: 'center',
-          y: pageHeight / 2 - 30,
         });
 
       doc.fontSize(24)
         .fillColor('#16A34A')
         .font('Helvetica-Bold')
-        .text(data.courseTitle, {
+        .text(data.courseTitle, pageWidth / 2, pageHeight / 2 + 10, {
           align: 'center',
-          y: pageHeight / 2 + 10,
         });
 
       // Impact Summary
       doc.fontSize(14)
         .fillColor('#15803D')
         .font('Helvetica')
-        .text('Impact Summary:', {
+        .text('Impact Summary:', pageWidth / 2, pageHeight / 2 + 70, {
           align: 'center',
-          y: pageHeight / 2 + 70,
         });
 
       doc.fontSize(12)
         .fillColor('#6B7280')
         .font('Helvetica')
-        .text(data.impactSummary, {
+        .text(data.impactSummary, margin, pageHeight / 2 + 100, {
           align: 'center',
           width: pageWidth - margin * 2,
-          y: pageHeight / 2 + 100,
         });
 
       // Date
@@ -375,36 +391,32 @@ async function generatePDFBuffer(data: {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
-        })}`, {
+        })}`, pageWidth / 2, pageHeight / 2 + 180, {
           align: 'center',
-          y: pageHeight / 2 + 180,
         });
 
       // Certificate ID
       doc.fontSize(10)
         .fillColor('#9CA3AF')
         .font('Helvetica')
-        .text(`Certificate ID: ${data.certificateId}`, {
+        .text(`Certificate ID: ${data.certificateId}`, pageWidth / 2, pageHeight / 2 + 220, {
           align: 'center',
-          y: pageHeight / 2 + 220,
         });
 
       // Footer
       doc.fontSize(12)
         .fillColor('#6B7280')
         .font('Helvetica')
-        .text('Planet Path - Environmental Education Platform', {
+        .text('Planet Path - Environmental Education Platform', pageWidth / 2, pageHeight - 80, {
           align: 'center',
-          y: pageHeight - 80,
         });
 
       // Verification URL
       doc.fontSize(10)
         .fillColor('#9CA3AF')
         .font('Helvetica')
-        .text(`Verify at: /api/certificates/verify/${data.certificateId}`, {
+        .text(`Verify at: /api/certificates/verify/${data.certificateId}`, pageWidth / 2, pageHeight - 60, {
           align: 'center',
-          y: pageHeight - 60,
         });
 
       // Decorative border elements

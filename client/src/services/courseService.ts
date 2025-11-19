@@ -1,18 +1,29 @@
 import axiosInstance from './axiosInstance';
 
-interface Course {
+/**
+ * Course Interface matching backend ICourse model
+ */
+export interface Course {
   _id?: string;
   id?: string;
   title: string;
+  slug?: string;
   description: string;
-  level?: string;
+  authorId?: string | { _id: string; name: string };
+  modules?: Array<{ _id: string; title: string }> | string[];
   tags?: string[];
-  price?: number;
-  modules?: any[];
+  price: number;
+  impact_type?: 'climate' | 'waste' | 'energy' | 'water' | 'community' | 'other';
+  status?: 'draft' | 'published' | 'archived';
+  createdAt?: Date;
+  updatedAt?: Date;
   [key: string]: any;
 }
 
-interface CoursesResponse {
+/**
+ * Courses Response Interface
+ */
+export interface CoursesResponse {
   courses: Course[];
   pagination?: {
     page: number;
@@ -22,12 +33,17 @@ interface CoursesResponse {
   };
 }
 
-interface Enrollment {
+/**
+ * Enrollment Interface matching backend IEnrollment model
+ */
+export interface Enrollment {
   _id?: string;
   id?: string;
-  userId: string;
-  courseId: string;
+  userId: string | { _id: string; name: string; email: string };
+  courseId: string | { _id: string; title: string };
   enrolledAt?: Date;
+  progress?: number;
+  completedAt?: Date;
   [key: string]: any;
 }
 
@@ -37,6 +53,7 @@ interface Enrollment {
 class CourseService {
   /**
    * Get all courses
+   * GET /api/courses
    * @param params - Query parameters (status, impact_type, tags, page, limit, sort)
    * @returns Promise with courses and pagination
    */
@@ -69,6 +86,7 @@ class CourseService {
 
   /**
    * Get a single course by ID or slug
+   * GET /api/courses/:id
    * @param id - Course ID or slug
    * @returns Promise with course object
    */
@@ -95,6 +113,7 @@ class CourseService {
 
   /**
    * Enroll in a course
+   * POST /api/enrollments
    * @param courseId - Course ID to enroll in
    * @returns Promise with enrollment object
    */
@@ -122,6 +141,56 @@ class CourseService {
   }
 
   /**
+   * Check if user is enrolled in a course
+   * GET /api/enrollments/user/:userId
+   * @param courseId - Course ID to check
+   * @returns Promise with boolean indicating enrollment status
+   */
+  async checkEnrollment(courseId: string): Promise<boolean> {
+    try {
+      // Get auth from localStorage
+      const stored = localStorage.getItem('planet-path-auth-storage');
+      if (!stored) {
+        return false;
+      }
+
+      const parsed = JSON.parse(stored);
+      const userId = parsed.user?.id;
+
+      if (!userId) {
+        return false;
+      }
+
+      const response = await axiosInstance.get<{
+        success: boolean;
+        data?: {
+          enrollments?: Enrollment[];
+        } | Enrollment[];
+        message?: string;
+      }>(`/enrollments/user/${userId}`);
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data as any;
+        const enrollments = Array.isArray(data) ? data : data.enrollments || [];
+        
+        // Check if any enrollment matches the courseId
+        return enrollments.some((enrollment: Enrollment) => {
+          const enrollmentCourseId = 
+            typeof enrollment.courseId === 'string' 
+              ? enrollment.courseId 
+              : (enrollment.courseId as any)?._id || (enrollment.courseId as any)?.id;
+          return enrollmentCourseId === courseId;
+        });
+      }
+
+      return false;
+    } catch (error: any) {
+      // If endpoint doesn't exist or user not found, return false
+      return false;
+    }
+  }
+
+  /**
    * Handle API errors
    * @private
    */
@@ -141,4 +210,3 @@ class CourseService {
 }
 
 export default new CourseService();
-

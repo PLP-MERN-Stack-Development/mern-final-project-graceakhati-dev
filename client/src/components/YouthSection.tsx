@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import ProtectedLink from './auth/ProtectedLink';
 import ImageLoader from './ImageLoader';
 import { heroImages } from '@/utils/imagePaths';
 
@@ -122,12 +122,12 @@ function YouthSection() {
             <p className="text-gray-600 mb-6 text-lg">
               Start your climate action journey today. Learn, act, and earn certificates.
             </p>
-            <Link
+            <ProtectedLink
               to="/catalog"
               className="inline-block px-10 py-4 bg-green-600 text-white rounded-lg font-bold text-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-xl animate-pulse"
             >
               Start Your Climate Journey
-            </Link>
+            </ProtectedLink>
           </div>
         </div>
       </div>

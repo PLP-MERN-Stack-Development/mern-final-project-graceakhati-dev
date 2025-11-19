@@ -12,7 +12,12 @@ export type UserRole = 'student' | 'instructor' | 'admin';
 export interface AuthUser {
   id: string;
   name: string;
+  email: string;
   role: UserRole;
+  googleId?: string;
+  xp?: number;
+  badges?: string[];
+  _id?: string; // MongoDB _id for backward compatibility
 }
 
 /**
@@ -70,12 +75,9 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Storage keys for localStorage
+ * Storage key for localStorage (matches Zustand store)
  */
-const STORAGE_KEYS = {
-  USER: 'planet_path_user',
-  TOKEN: 'planet_path_token',
-} as const;
+const STORAGE_KEY = 'planet-path-auth-storage';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -100,41 +102,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         // Try loading from Zustand store first
         const authStore = useAuthStore.getState();
-        if (authStore.user && authStore.token) {
+        if (authStore && authStore.user && authStore.token) {
           setUser(authStore.user);
           setToken(authStore.token);
           setIsLoading(false);
           return;
         }
 
-        // Fallback to localStorage
-        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-
-        if (storedUser && storedToken) {
+        // Fallback to localStorage (using same key as Zustand store)
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
           try {
-            const user = JSON.parse(storedUser);
-            setUser(user);
-            setToken(storedToken);
-            // Sync with Zustand store
-            const authStore = useAuthStore.getState();
-            if (authStore && typeof authStore.loginWithUser === 'function') {
-              authStore.loginWithUser(user, storedToken);
+            const parsed = JSON.parse(stored);
+            if (parsed.user && parsed.token) {
+              setUser(parsed.user);
+              setToken(parsed.token);
+              // Sync with Zustand store
+              const store = useAuthStore.getState();
+              if (store && typeof store.loginWithUser === 'function') {
+                store.loginWithUser(parsed.user, parsed.token);
+              }
             }
           } catch (parseError) {
             // Invalid JSON - clear corrupted data
-            console.error('Error parsing stored user:', parseError);
-            localStorage.removeItem(STORAGE_KEYS.USER);
-            localStorage.removeItem(STORAGE_KEYS.TOKEN);
-            useAuthStore.getState().logout();
+            localStorage.removeItem(STORAGE_KEY);
+            // Safely call logout on Zustand store
+            try {
+              const store = useAuthStore.getState();
+              if (store && typeof store.logout === 'function') {
+                store.logout();
+              }
+            } catch (storeError) {
+              // Silently fail if store is not available
+            }
           }
         }
       } catch (error) {
-        console.error('Error loading auth state:', error);
         // Clear corrupted data
-        localStorage.removeItem(STORAGE_KEYS.USER);
-        localStorage.removeItem(STORAGE_KEYS.TOKEN);
-        useAuthStore.getState().logout();
+        localStorage.removeItem(STORAGE_KEY);
+        // Safely call logout on Zustand store
+        try {
+          const store = useAuthStore.getState();
+          if (store && typeof store.logout === 'function') {
+            store.logout();
+          }
+        } catch (storeError) {
+          // Silently fail if store is not available
+        }
       } finally {
         setIsLoading(false);
       }
@@ -174,6 +188,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const mockUser: AuthUser = {
       id: `u-${Date.now()}`,
       name: credentials.email.split('@')[0], // Extract name from email
+      email: credentials.email,
       role: 'student', // Default role - backend should return actual role
     };
 
@@ -184,15 +199,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(mockUser);
     setToken(mockToken);
 
-    // Persist to localStorage
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mockUser));
-    localStorage.setItem(STORAGE_KEYS.TOKEN, mockToken);
+    // Persist to localStorage (using same key as Zustand store)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      user: mockUser,
+      token: mockToken,
+      isAuthenticated: true,
+      role: mockUser.role,
+    }));
 
-        // Sync with Zustand store
-        const authStore = useAuthStore.getState();
-        if (authStore && typeof authStore.loginWithUser === 'function') {
-          authStore.loginWithUser(mockUser, mockToken);
-        }
+    // Sync with Zustand store
+    try {
+      const authStore = useAuthStore.getState();
+      if (authStore && typeof authStore.loginWithUser === 'function') {
+        authStore.loginWithUser(mockUser, mockToken);
+      }
+    } catch (storeError) {
+      // Silently fail if store is not available
+    }
   };
 
   /**
@@ -230,6 +253,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const mockUser: AuthUser = {
       id: `u-${Date.now()}`,
       name: credentials.fullName,
+      email: credentials.email,
       role: credentials.role,
     };
 
@@ -240,15 +264,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(mockUser);
     setToken(mockToken);
 
-    // Persist to localStorage
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mockUser));
-    localStorage.setItem(STORAGE_KEYS.TOKEN, mockToken);
+    // Persist to localStorage (using same key as Zustand store)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      user: mockUser,
+      token: mockToken,
+      isAuthenticated: true,
+      role: mockUser.role,
+    }));
 
-        // Sync with Zustand store
-        const authStore = useAuthStore.getState();
-        if (authStore && typeof authStore.loginWithUser === 'function') {
-          authStore.loginWithUser(mockUser, mockToken);
-        }
+    // Sync with Zustand store
+    try {
+      const authStore = useAuthStore.getState();
+      if (authStore && typeof authStore.loginWithUser === 'function') {
+        authStore.loginWithUser(mockUser, mockToken);
+      }
+    } catch (storeError) {
+      // Silently fail if store is not available
+    }
   };
 
   /**
@@ -273,6 +305,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const mockUser: AuthUser = {
       id: `u-google-${Date.now()}`,
       name: 'Google User',
+      email: 'google@example.com',
       role: 'student', // Backend should determine role
     };
 
@@ -281,14 +314,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(mockUser);
     setToken(mockToken);
 
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(mockUser));
-    localStorage.setItem(STORAGE_KEYS.TOKEN, mockToken);
+    // Persist to localStorage (using same key as Zustand store)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      user: mockUser,
+      token: mockToken,
+      isAuthenticated: true,
+      role: mockUser.role,
+    }));
 
-        // Sync with Zustand store
-        const authStore = useAuthStore.getState();
-        if (authStore && typeof authStore.loginWithUser === 'function') {
-          authStore.loginWithUser(mockUser, mockToken);
-        }
+    // Sync with Zustand store
+    try {
+      const authStore = useAuthStore.getState();
+      if (authStore && typeof authStore.loginWithUser === 'function') {
+        authStore.loginWithUser(mockUser, mockToken);
+      }
+    } catch (storeError) {
+      // Silently fail if store is not available
+    }
   };
 
   /**
@@ -309,11 +351,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = (): void => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem(STORAGE_KEYS.USER);
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEY);
 
-    // Sync with Zustand store
-    useAuthStore.getState().logout();
+    // Safely call logout on Zustand store
+    try {
+      const store = useAuthStore.getState();
+      if (store && typeof store.logout === 'function') {
+        store.logout();
+      }
+    } catch (storeError) {
+      // Silently fail if store is not available
+    }
   };
 
   const value: AuthContextType = {

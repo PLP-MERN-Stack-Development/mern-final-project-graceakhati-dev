@@ -4,6 +4,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
  * Assignment Document Interface
  */
 export interface IAssignment extends Document {
+  _id: Types.ObjectId;
   title: string;
   description: string;
   lessonId?: Types.ObjectId;

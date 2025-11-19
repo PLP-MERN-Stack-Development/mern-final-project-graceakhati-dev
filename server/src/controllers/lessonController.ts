@@ -41,7 +41,7 @@ export const createLesson = async (req: AuthRequest, res: Response): Promise<voi
     await lesson.save();
 
     // Add lesson to module's lessons array
-    module.lessons.push(lesson._id as any);
+    module.lessons.push(lesson._id);
     await module.save();
 
     res.status(201).json({
@@ -122,7 +122,7 @@ export const deleteLesson = async (req: AuthRequest, res: Response): Promise<voi
     if (module) {
       module.lessons = module.lessons.filter(
         (lessonId) => lessonId.toString() !== id
-      ) as any;
+      );
       await module.save();
     }
 

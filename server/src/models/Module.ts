@@ -4,6 +4,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
  * Module Document Interface
  */
 export interface IModule extends Document {
+  _id: Types.ObjectId;
   title: string;
   courseId: Types.ObjectId;
   order: number;

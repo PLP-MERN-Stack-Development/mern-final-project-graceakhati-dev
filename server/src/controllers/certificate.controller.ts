@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import Certificate from '../models/Certificate';
 import { generateAndStoreCertificate } from '../services/certificate.service';
@@ -35,7 +36,7 @@ export const generateCertificate = async (
     }
 
     // Check if user is authorized (can only generate for themselves unless admin/instructor)
-    const requestingUserId = req.user._id?.toString();
+    const requestingUserId = req.user._id.toString();
     const isAdminOrInstructor = ['admin', 'instructor'].includes(req.user.role);
 
     if (userId !== requestingUserId && !isAdminOrInstructor) {
@@ -57,11 +58,15 @@ export const generateCertificate = async (
         success: true,
         message: 'Certificate already exists',
         data: {
-          id: existingCertificate._id,
+          id: existingCertificate._id.toString(),
           url: existingCertificate.url,
           issuedAt: existingCertificate.issuedAt,
-          userId: existingCertificate.userId,
-          courseId: existingCertificate.courseId,
+          userId: existingCertificate.userId instanceof Types.ObjectId
+            ? existingCertificate.userId.toString()
+            : String(existingCertificate.userId),
+          courseId: existingCertificate.courseId instanceof Types.ObjectId
+            ? existingCertificate.courseId.toString()
+            : String(existingCertificate.courseId),
         },
       });
       return;
@@ -88,11 +93,15 @@ export const generateCertificate = async (
       success: true,
       message: 'Certificate generated successfully',
       data: {
-        id: certificate._id,
+        id: certificate._id.toString(),
         url: certificate.url,
         issuedAt: certificate.issuedAt,
-        userId: certificate.userId,
-        courseId: certificate.courseId,
+        userId: certificate.userId instanceof Types.ObjectId
+          ? certificate.userId.toString()
+          : String(certificate.userId),
+        courseId: certificate.courseId instanceof Types.ObjectId
+          ? certificate.courseId.toString()
+          : String(certificate.courseId),
       },
     });
   } catch (error) {
@@ -134,8 +143,11 @@ export const getCertificate = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const userId = req.user._id?.toString();
-    const certificateUserId = certificate.userId.toString();
+    const userId = req.user._id.toString();
+    // certificate.userId is Types.ObjectId, safe to call toString()
+    const certificateUserId = certificate.userId instanceof Types.ObjectId
+      ? certificate.userId.toString()
+      : String(certificate.userId);
     const isOwner = userId === certificateUserId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
@@ -150,11 +162,15 @@ export const getCertificate = async (req: AuthRequest, res: Response): Promise<v
     res.status(200).json({
       success: true,
       data: {
-        id: certificate._id,
+        id: certificate._id.toString(),
         url: certificate.url,
         issuedAt: certificate.issuedAt,
-        userId: certificate.userId,
-        courseId: certificate.courseId,
+        userId: certificate.userId instanceof Types.ObjectId
+          ? certificate.userId.toString()
+          : String(certificate.userId),
+        courseId: certificate.courseId instanceof Types.ObjectId
+          ? certificate.courseId.toString()
+          : String(certificate.courseId),
       },
     });
   } catch (error) {
@@ -187,7 +203,7 @@ export const getUserCertificates = async (
       return;
     }
 
-    const requestingUserId = req.user._id?.toString();
+    const requestingUserId = req.user._id.toString();
     const isAdminOrInstructor = ['admin', 'instructor'].includes(req.user.role);
 
     if (userId !== requestingUserId && !isAdminOrInstructor) {
@@ -206,11 +222,15 @@ export const getUserCertificates = async (
       success: true,
       data: {
         certificates: certificates.map((cert) => ({
-          id: cert._id,
+          id: cert._id.toString(),
           url: cert.url,
           issuedAt: cert.issuedAt,
-          userId: cert.userId,
-          courseId: cert.courseId,
+          userId: cert.userId instanceof Types.ObjectId
+            ? cert.userId.toString()
+            : String(cert.userId),
+          courseId: cert.courseId instanceof Types.ObjectId
+            ? cert.courseId.toString()
+            : String(cert.courseId),
         })),
         count: certificates.length,
       },
@@ -262,11 +282,15 @@ export const getCourseCertificates = async (
       success: true,
       data: {
         certificates: certificates.map((cert) => ({
-          id: cert._id,
+          id: cert._id.toString(),
           url: cert.url,
           issuedAt: cert.issuedAt,
-          userId: cert.userId,
-          courseId: cert.courseId,
+          userId: cert.userId instanceof Types.ObjectId
+            ? cert.userId.toString()
+            : String(cert.userId),
+          courseId: cert.courseId instanceof Types.ObjectId
+            ? cert.courseId.toString()
+            : String(cert.courseId),
         })),
         count: certificates.length,
       },

@@ -1,25 +1,35 @@
 import axiosInstance from './axiosInstance';
 import { useAuthStore } from '@/store/useAuthStore';
 
-interface Submission {
+/**
+ * Submission Interface matching backend ISubmission model
+ */
+export interface Submission {
   _id?: string;
   id?: string;
-  assignmentId: string;
-  courseId: string;
-  userId: string;
+  assignmentId: string | { _id: string; title: string };
+  courseId: string | { _id: string; title: string };
+  userId: string | { _id: string; name: string; email: string };
   files: string[];
   metadata?: {
     geotag?: { lat: number; lng: number };
     notes?: string;
   };
+  score?: number | null;
+  feedback?: string;
+  status?: 'submitted' | 'graded' | 'rejected';
   aiScore?: number;
   verified?: boolean;
   verifiedAt?: Date | null;
-  status?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
   [key: string]: any;
 }
 
-interface SubmitProjectParams {
+/**
+ * Submit Project Parameters
+ */
+export interface SubmitProjectParams {
   courseId: string;
   image: File;
   geotag?: { lat: number; lng: number };
@@ -33,6 +43,7 @@ interface SubmitProjectParams {
 class SubmissionService {
   /**
    * Submit a project/assignment
+   * POST /api/submissions (multipart/form-data)
    * @param submissionData - Submission data
    * @returns Promise with submission object
    */
@@ -126,7 +137,8 @@ class SubmissionService {
 
   /**
    * Get current user's submissions
-   * @param courseId - Optional course ID to filter submissions
+   * GET /api/submissions/assignment/:assignmentId (filtered by user)
+   * @param courseId - Course ID to filter submissions
    * @returns Promise with array of submissions
    */
   async getMySubmissions(courseId: string | null = null): Promise<Submission[]> {
@@ -186,15 +198,17 @@ class SubmissionService {
             if (currentUser) {
               const userId = currentUser.id;
               const userSubmissions = submissions.filter((sub: Submission) => {
-                const subUserId = (sub.userId as any)?._id || (sub.userId as any)?.id || sub.userId;
+                const subUserId = 
+                  typeof sub.userId === 'string'
+                    ? sub.userId
+                    : (sub.userId as any)?._id || (sub.userId as any)?.id || sub.userId;
                 return subUserId && subUserId.toString() === userId.toString();
               });
               allSubmissions.push(...userSubmissions);
             }
           }
         } catch (err) {
-          // Skip if no permission or assignment has no submissions
-          console.warn(`Could not fetch submissions for assignment ${assignment._id}:`, err);
+          // Skip if no permission or assignment has no submissions - silently fail
         }
       }
 
@@ -224,4 +238,3 @@ class SubmissionService {
 }
 
 export default new SubmissionService();
-

@@ -134,32 +134,28 @@ function Instructor() {
     }));
   };
 
-  /**
-   * Handle edit tag input
-   */
-  const handleEditTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const tag = tagInput.trim();
-      if (tag && !editFormData.tags.includes(tag)) {
-        setEditFormData((prev) => ({
-          ...prev,
-          tags: [...prev.tags, tag],
-        }));
-        setTagInput('');
-      }
-    }
-  };
+  // Note: These functions are defined but not currently used in the UI
+  // They can be enabled when tag editing is added to the edit form
+  // const handleEditTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   if (e.key === 'Enter' || e.key === ',') {
+  //     e.preventDefault();
+  //     const tag = tagInput.trim();
+  //     if (tag && !editFormData.tags.includes(tag)) {
+  //       setEditFormData((prev) => ({
+  //         ...prev,
+  //         tags: [...prev.tags, tag],
+  //       }));
+  //       setTagInput('');
+  //     }
+  //   }
+  // };
 
-  /**
-   * Remove a tag from edit form
-   */
-  const removeEditTag = (tagToRemove: string) => {
-    setEditFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }));
-  };
+  // const removeEditTag = (tagToRemove: string) => {
+  //   setEditFormData((prev) => ({
+  //     ...prev,
+  //     tags: prev.tags.filter((tag) => tag !== tagToRemove),
+  //   }));
+  // };
 
   /**
    * Save edited course

@@ -1,9 +1,16 @@
 /**
  * Authentication API Integration Tests
  * 
- * Tests for:
+ * Comprehensive tests for:
  * - POST /api/auth/register
+ *   - Successful registration
+ *   - Validation errors (email, password, name, role)
+ *   - Duplicate email handling
  * - POST /api/auth/login
+ *   - Successful login
+ *   - Invalid credentials
+ *   - Validation errors
+ *   - Missing fields
  */
 
 import request from 'supertest';

@@ -20,6 +20,7 @@ export interface ISubmissionMetadata {
  * Submission Document Interface
  */
 export interface ISubmission extends Document {
+  _id: Types.ObjectId;
   assignmentId: Types.ObjectId;
   courseId: Types.ObjectId;
   userId: Types.ObjectId;

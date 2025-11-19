@@ -9,6 +9,7 @@ export type ImpactType = 'climate' | 'waste' | 'energy' | 'water' | 'community' 
  * Course Document Interface
  */
 export interface ICourse extends Document {
+  _id: Types.ObjectId;
   title: string;
   slug: string;
   description: string;

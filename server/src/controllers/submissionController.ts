@@ -6,6 +6,8 @@ import { scoreSubmission } from '../services/verificationService';
 import { dispatchEvent } from '../worker/badgeWorker';
 import Submission from '../models/Submission';
 import Assignment from '../models/Assignment';
+import { Types } from 'mongoose';
+import { IUser } from '../models/User';
 
 /**
  * Submit an assignment
@@ -265,8 +267,19 @@ export const getSubmissionById = async (req: AuthRequest, res: Response): Promis
 
     // Students can only view their own submissions
     // Instructors/admins can view all
-    const userId = req.user._id?.toString();
-    const submissionUserId = submission.userId.toString();
+    const userId = req.user._id.toString();
+    // Handle populated userId (could be ObjectId or populated User object)
+    let submissionUserId: string;
+    if (submission.userId instanceof Types.ObjectId) {
+      submissionUserId = submission.userId.toString();
+    } else if (typeof submission.userId === 'object' && submission.userId !== null && '_id' in submission.userId) {
+      // Populated User object
+      const populatedUser = submission.userId as unknown as IUser;
+      submissionUserId = populatedUser._id.toString();
+    } else {
+      // Fallback: try toString() directly
+      submissionUserId = String(submission.userId);
+    }
     const isOwner = userId === submissionUserId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 

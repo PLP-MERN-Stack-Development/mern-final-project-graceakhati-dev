@@ -66,7 +66,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     await user.save();
 
     // Generate token
-    const token = generateToken((user._id as any).toString(), user.email, user.role);
+    const token = generateToken(user._id.toString(), user.email, user.role);
 
     res.status(201).json({
       success: true,
@@ -135,7 +135,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate token
-    const token = generateToken((user._id as any).toString(), user.email, user.role);
+    const token = generateToken(user._id.toString(), user.email, user.role);
 
     res.status(200).json({
       success: true,
@@ -180,7 +180,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       success: true,
       data: {
         user: {
-          id: req.user.id || (req.user._id as any).toString(),
+          id: req.user._id.toString(),
           name: req.user.name,
           email: req.user.email,
           role: req.user.role,

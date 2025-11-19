@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ImageLoader from './ImageLoader';
-import { useAuth } from '@/hooks/useAuth';
+import ProtectedLink from './auth/ProtectedLink';
+import { useAuthStore, UserRole } from '@/store/useAuthStore';
 import { navIcons } from '@/utils/imagePaths';
 import { dashboardAvatars } from '@/utils/imagePaths';
 
@@ -14,10 +15,34 @@ interface NavLink {
   path: string;
   icon: string;
   ariaLabel: string;
+  roles?: UserRole[]; // Roles that can see this link
 }
 
-function NavBar({ currentPage }: NavBarProps) {
-  const { user, isAuthenticated, logout } = useAuth();
+function NavBar(_props: NavBarProps) {
+  // Get auth from localStorage via useAuthStore
+  const getAuthFromStorage = () => {
+    try {
+      const stored = localStorage.getItem('planet-path-auth-storage');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          user: parsed.user || null,
+          isAuthenticated: !!(parsed.user && parsed.token),
+        };
+      }
+    } catch (error) {
+      // Silently fail - return unauthenticated state
+    }
+    return { user: null, isAuthenticated: false };
+  };
+
+  const { user: storeUser, isAuthenticated: storeIsAuthenticated, logout } = useAuthStore();
+  const { user: storageUser, isAuthenticated: storageIsAuthenticated } = getAuthFromStorage();
+  
+  // Use store user if available, otherwise fall back to storage
+  const user = storeUser || storageUser;
+  const isAuthenticated = storeIsAuthenticated || storageIsAuthenticated;
+
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,6 +62,7 @@ function NavBar({ currentPage }: NavBarProps) {
   };
 
   const handleLogout = () => {
+    // Call store logout (which also clears localStorage)
     logout();
     navigate('/');
     setIsDropdownOpen(false);
@@ -63,17 +89,42 @@ function NavBar({ currentPage }: NavBarProps) {
     };
   }, [isDropdownOpen]);
 
-  // Determine which links to show based on authentication and role
-  const getNavLinks = (): NavLink[] => {
+  /**
+   * Check if user has access to a link based on role
+   */
+  const hasAccessToLink = (link: NavLink): boolean => {
+    // If no roles specified, anyone can see it
+    if (!link.roles || link.roles.length === 0) {
+      return true;
+    }
+    
+    // If not authenticated, can't access role-restricted links
     if (!isAuthenticated || !user) {
-      // Not authenticated: show Login, Courses, About
+      return false;
+    }
+
+    // Check if user's role is in allowed roles
+    return link.roles.includes(user.role);
+  };
+
+  /**
+   * Determine which links to show based on authentication and role
+   */
+  const getNavLinks = (): NavLink[] => {
+    // Base links available to all users
+    const baseLinks: NavLink[] = [
+      {
+        label: 'Courses',
+        path: '/courses',
+        icon: navIcons.courses,
+        ariaLabel: 'Browse courses',
+      },
+    ];
+
+    if (!isAuthenticated || !user) {
+      // Not authenticated: show Login
       return [
-        {
-          label: 'Courses',
-          path: '/catalog',
-          icon: navIcons.courses,
-          ariaLabel: 'Browse courses',
-        },
+        ...baseLinks,
         {
           label: 'About',
           path: '/',
@@ -89,82 +140,58 @@ function NavBar({ currentPage }: NavBarProps) {
       ];
     }
 
-    switch (user.role) {
-      case 'student':
-        return [
-          {
-            label: 'Home',
-            path: '/',
-            icon: navIcons.home,
-            ariaLabel: 'Go to home page',
-          },
-          {
-            label: 'Courses',
-            path: '/catalog',
-            icon: navIcons.courses,
-            ariaLabel: 'Browse courses',
-          },
-          {
-            label: 'Dashboard',
-            path: '/dashboard',
-            icon: navIcons.dashboard,
-            ariaLabel: 'View your student dashboard',
-          },
-        ];
+    // Role-specific links
+    const roleLinks: NavLink[] = [];
 
-      case 'instructor':
-        return [
-          {
-            label: 'Home',
-            path: '/',
-            icon: navIcons.home,
-            ariaLabel: 'Go to home page',
-          },
-          {
-            label: 'Courses',
-            path: '/catalog',
-            icon: navIcons.courses,
-            ariaLabel: 'Browse courses',
-          },
-          {
-            label: 'Instructor',
-            path: '/instructor',
-            icon: navIcons.dashboard,
-            ariaLabel: 'Go to instructor dashboard',
-          },
-        ];
-
-      case 'admin':
-        return [
-          {
-            label: 'Home',
-            path: '/',
-            icon: navIcons.home,
-            ariaLabel: 'Go to home page',
-          },
-          {
-            label: 'Admin',
-            path: '/admin',
-            icon: navIcons.settings,
-            ariaLabel: 'Go to admin dashboard',
-          },
-          {
-            label: 'Reports',
-            path: '/admin/reports',
-            icon: navIcons.dashboard,
-            ariaLabel: 'View reports',
-          },
-        ];
-
-      default:
-        return [];
+    // Student links
+    if (user.role === 'student') {
+      roleLinks.push({
+        label: 'Dashboard',
+        path: '/student/dashboard',
+        icon: navIcons.dashboard,
+        ariaLabel: 'View your student dashboard',
+        roles: ['student'],
+      });
     }
+
+    // Instructor links
+    if (user.role === 'instructor') {
+      roleLinks.push({
+        label: 'Instructor',
+        path: '/instructor',
+        icon: navIcons.dashboard,
+        ariaLabel: 'Go to instructor dashboard',
+        roles: ['instructor'],
+      });
+    }
+
+    // Admin links
+    if (user.role === 'admin') {
+      roleLinks.push({
+        label: 'Admin',
+        path: '/admin',
+        icon: navIcons.settings,
+        ariaLabel: 'Go to admin dashboard',
+        roles: ['admin'],
+      });
+    }
+
+    return [
+      {
+        label: 'Home',
+        path: '/',
+        icon: navIcons.home,
+        ariaLabel: 'Go to home page',
+      },
+      ...baseLinks,
+      ...roleLinks,
+    ];
   };
 
-  const navLinks = getNavLinks();
+  const navLinks = getNavLinks().filter(link => hasAccessToLink(link));
 
   const isActive = (path: string) => {
-    return location.pathname === path;
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   return (
@@ -199,8 +226,16 @@ function NavBar({ currentPage }: NavBarProps) {
           <div className="hidden md:flex items-center space-x-1">
             {navLinks.map((link, index) => {
               const active = isActive(link.path);
+              // Check if link is to a protected route
+              const isProtectedRoute = ['/courses', '/catalog', '/projects', '/student', '/instructor', '/admin'].some(
+                route => link.path.startsWith(route)
+              );
+              
+              // Use ProtectedLink for protected routes, regular Link for public routes
+              const LinkComponent = isProtectedRoute ? ProtectedLink : Link;
+              
               return (
-                <Link
+                <LinkComponent
                   key={`${link.path}-${index}`}
                   to={link.path}
                   className={`group flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -211,6 +246,7 @@ function NavBar({ currentPage }: NavBarProps) {
                   data-testid={`nav-link-${link.path}`}
                   aria-current={active ? 'page' : undefined}
                   aria-label={link.ariaLabel}
+                  allowedRoles={link.roles}
                 >
                   <div
                     className={`transition-transform duration-200 ${
@@ -229,7 +265,7 @@ function NavBar({ currentPage }: NavBarProps) {
                     />
                   </div>
                   <span>{link.label}</span>
-                </Link>
+                </LinkComponent>
               );
             })}
 
@@ -354,8 +390,16 @@ function NavBar({ currentPage }: NavBarProps) {
           <div className="py-4 space-y-2">
             {navLinks.map((link, index) => {
               const active = isActive(link.path);
+              // Check if link is to a protected route
+              const isProtectedRoute = ['/courses', '/catalog', '/projects', '/student', '/instructor', '/admin'].some(
+                route => link.path.startsWith(route)
+              );
+              
+              // Use ProtectedLink for protected routes, regular Link for public routes
+              const LinkComponent = isProtectedRoute ? ProtectedLink : Link;
+              
               return (
-                <Link
+                <LinkComponent
                   key={`${link.path}-${index}`}
                   to={link.path}
                   onClick={closeMobileMenu}
@@ -367,6 +411,7 @@ function NavBar({ currentPage }: NavBarProps) {
                   data-testid={`mobile-nav-link-${link.path}`}
                   aria-current={active ? 'page' : undefined}
                   aria-label={link.ariaLabel}
+                  allowedRoles={link.roles}
                 >
                   <div
                     className={`transition-transform duration-200 ${
@@ -385,7 +430,7 @@ function NavBar({ currentPage }: NavBarProps) {
                     />
                   </div>
                   <span>{link.label}</span>
-                </Link>
+                </LinkComponent>
               );
             })}
 

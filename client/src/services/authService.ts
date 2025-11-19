@@ -7,6 +7,9 @@ interface LoginResponse {
     name: string;
     email: string;
     role: string;
+    googleId?: string;
+    xp?: number;
+    badges?: string[];
   };
   token: string;
 }
@@ -18,6 +21,9 @@ interface SignupResponse {
     name: string;
     email: string;
     role: string;
+    googleId?: string;
+    xp?: number;
+    badges?: string[];
   };
   token: string;
 }
@@ -28,6 +34,9 @@ interface UserResponse {
   name: string;
   email: string;
   role: string;
+  googleId?: string;
+  xp?: number;
+  badges?: string[];
 }
 
 /**
@@ -99,20 +108,38 @@ class AuthService {
   }
 
   /**
-   * Login with Google OAuth
+   * Register a new user (alias for signup)
+   * @param name - User full name
+   * @param email - User email
+   * @param password - User password
+   * @param role - User role (optional, defaults to 'student')
+   * @returns Promise with user and token
+   */
+  async register(name: string, email: string, password: string, role: string = 'student'): Promise<SignupResponse> {
+    return this.signup(name, email, password, role);
+  }
+
+  /**
+   * Login with Google OAuth (stub endpoint)
+   * Calls /auth/google endpoint via Axios
    * @returns Promise with user and token
    */
   async loginWithGoogle(): Promise<LoginResponse> {
     try {
-      // TODO: Implement Google OAuth flow
-      // This would typically involve:
-      // 1. Redirecting to Google OAuth
-      // 2. Getting authorization code
-      // 3. Exchanging code for token with backend
-      // 4. Backend returns user and JWT token
+      const response = await axiosInstance.post<{
+        success: boolean;
+        data?: LoginResponse;
+        message?: string;
+      }>('/auth/google');
 
-      // For now, throw an error indicating it needs implementation
-      throw new Error('Google OAuth login not yet implemented. Please use email/password login.');
+      if (response.data.success && response.data.data) {
+        return {
+          user: response.data.data.user,
+          token: response.data.data.token,
+        };
+      }
+
+      throw new Error(response.data.message || 'Google login failed');
     } catch (error: any) {
       throw this.handleError(error);
     }
@@ -145,23 +172,57 @@ class AuthService {
 
   /**
    * Handle API errors
+   * FIX: Better error messages for different error types
    * @private
    */
   private handleError(error: any): Error {
+    // Network errors (no response received)
+    if (error.isNetworkError || (!error.response && error.request)) {
+      const networkMessage = error.message || 'Network error. Please check your internet connection and try again.';
+      const networkError = new Error(networkMessage);
+      (networkError as any).isNetworkError = true;
+      (networkError as any).code = error.code || 'NETWORK_ERROR';
+      return networkError;
+    }
+
+    // Server responded with error status
     if (error.response) {
-      // Server responded with error status
-      const message = error.response.data?.message || error.response.data?.error || 'An error occurred';
+      const status = error.response.status;
+      let message = error.response.data?.message || error.response.data?.error || 'An error occurred';
+      
+      // Provide user-friendly messages for common errors
+      if (status === 400) {
+        message = error.response.data?.message || 'Invalid request. Please check your input.';
+      } else if (status === 401) {
+        message = error.response.data?.message || 'Authentication failed. Please check your credentials.';
+      } else if (status === 403) {
+        message = error.response.data?.message || 'Access denied. You do not have permission.';
+      } else if (status === 404) {
+        message = error.response.data?.message || 'Resource not found.';
+      } else if (status === 409) {
+        message = error.response.data?.message || 'User already exists. Please log in instead.';
+      } else if (status >= 500) {
+        message = error.response.data?.message || 'Server error. Please try again later.';
+      }
+      
       const errorObj = new Error(message);
-      (errorObj as any).status = error.response.status;
+      (errorObj as any).status = status;
       (errorObj as any).data = error.response.data;
       return errorObj;
-    } else if (error.request) {
-      // Request made but no response received
-      return new Error('Network error. Please check your connection.');
-    } else {
-      // Something else happened
+    }
+
+    // Something else happened (e.g., AUTH_REQUIRED from interceptor)
+    if (error.code === 'AUTH_REQUIRED') {
+      return new Error('Authentication required. Please log in.');
+    }
+
+    // Return the error as-is if it's already an Error object
+    if (error instanceof Error) {
       return error;
     }
+
+    // Fallback: create a generic error
+    return new Error(error.message || 'An unexpected error occurred. Please try again.');
   }
 }
 

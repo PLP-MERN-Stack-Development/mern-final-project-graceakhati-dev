@@ -11,7 +11,12 @@ export type UserRole = 'student' | 'instructor' | 'admin';
 export interface AuthUser {
   id: string;
   name: string;
+  email: string;
   role: UserRole;
+  googleId?: string;
+  xp?: number;
+  badges?: string[];
+  _id?: string; // MongoDB _id for backward compatibility
 }
 
 /**
@@ -96,7 +101,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
           };
         }
       } catch (error) {
-        console.error('Error loading auth state from localStorage:', error);
+        // Silently fail - return unauthenticated state
       }
       return {
         user: null,
@@ -211,6 +216,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const mockUser: AuthUser = {
         id: `u-${Date.now()}`,
         name: credentials.email.split('@')[0], // Extract name from email
+        email: credentials.email,
         role: 'student', // Default role - backend should return actual role
       };
 
@@ -271,6 +277,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const mockUser: AuthUser = {
         id: `u-${Date.now()}`,
         name: credentials.fullName,
+        email: credentials.email,
         role: credentials.role,
       };
 
@@ -319,6 +326,7 @@ export const useAuthStore = create<AuthStore>((set, get) => {
       const mockUser: AuthUser = {
         id: `u-google-${Date.now()}`,
         name: 'Google User',
+        email: 'google@example.com',
         role: 'student', // Backend should determine role
       };
 

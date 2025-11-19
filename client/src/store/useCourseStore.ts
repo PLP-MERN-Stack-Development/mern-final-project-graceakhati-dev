@@ -80,7 +80,6 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
     set((state) => {
       const courseToApprove = state.pending.find((c) => c.id === id);
       if (!courseToApprove) {
-        console.warn(`Course with id ${id} not found in pending list`);
         return state;
       }
 
@@ -120,7 +119,6 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
       );
 
       if (alreadyEnrolled) {
-        console.warn(`User ${userId} is already enrolled in course ${courseId}`);
         return state;
       }
 
