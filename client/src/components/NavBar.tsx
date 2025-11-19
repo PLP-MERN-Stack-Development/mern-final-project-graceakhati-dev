@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import ImageLoader from './ImageLoader';
-import ProtectedLink from './auth/ProtectedLink';
+import ImageLoader from './imageloader';
+import ProtectedLink from './auth/protectedlink';
 import { useAuthStore, UserRole } from '@/store/useAuthStore';
 import { navIcons } from '@/utils/imagePaths';
 import { dashboardAvatars } from '@/utils/imagePaths';

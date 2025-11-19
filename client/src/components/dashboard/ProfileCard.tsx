@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import Card from '@/components/Card';
-import ImageLoader from '@/components/ImageLoader';
+import Card from '@/components/card';
+import ImageLoader from '@/components/imageloader';
 import { dashboardAvatars } from '@/utils/imagePaths';
 
 export interface ProfileCardProps {

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ImageLoader from './ImageLoader';
+import ImageLoader from './imageloader';
 import { uiIllustrations } from '@/utils/imagePaths';
 
 export type ErrorType = '404' | 'offline' | 'generic';

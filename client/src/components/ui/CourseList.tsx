@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import CourseCard from '@/components/CourseCard';
+import CourseCard from '@/components/coursecard';
 
 export interface Course {
   id: string;

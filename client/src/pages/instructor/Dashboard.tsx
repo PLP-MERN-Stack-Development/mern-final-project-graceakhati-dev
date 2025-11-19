@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useCourseStore, Course } from '@/store/useCourseStore';
-import Button from '@/components/Button';
-import Card from '@/components/Card';
-import ImageLoader from '@/components/ImageLoader';
+import Button from '@/components/button';
+import Card from '@/components/card';
+import ImageLoader from '@/components/imageloader';
 
 /**
  * Course form data type (without id and status)

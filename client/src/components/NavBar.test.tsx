@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import NavBar, { NavBarProps } from './NavBar';
+import NavBar, { NavBarProps } from './navbar';
 import { useAuthStore, UserRole } from '@/store/useAuthStore';
 
 // Mock react-router-dom hooks

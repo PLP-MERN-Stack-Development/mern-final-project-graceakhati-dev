@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import CourseCard, { CourseCardProps } from './CourseCard';
+import CourseCard, { CourseCardProps } from './coursecard';
 
 // Helper function to render component with router
 const renderWithRouter = (props: CourseCardProps) => {

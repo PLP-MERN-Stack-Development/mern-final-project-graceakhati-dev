@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Card from '@/components/Card';
-import Button from '@/components/Button';
+import Card from '@/components/card';
+import Button from '@/components/button';
 
 function AdminSettings() {
   const [settings, setSettings] = useState({
