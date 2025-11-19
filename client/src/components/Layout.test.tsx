@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import '@testing-library/jest-dom';
 import Layout, { LayoutProps } from './layout/layout';
 import { useAuth } from '@/hooks/useAuth';
-import { AuthContextType } from '@/context/AuthContext';
+import type { AuthContextType } from '@/context/AuthContext';
 
 // Mock Footer component
 // layout.tsx is at components/layout/layout.tsx and imports './footer'
@@ -222,4 +223,3 @@ describe('Layout Component', () => {
     });
   });
 });
-
