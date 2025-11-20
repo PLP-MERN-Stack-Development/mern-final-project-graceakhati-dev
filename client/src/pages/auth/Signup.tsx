@@ -282,9 +282,16 @@ function SignupPage() {
     setErrors({});
     
     try {
-      // Get backend API URL from environment or use default
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const googleAuthUrl = `${apiUrl}/auth/google`;
+      // Get backend API URL from environment
+      const apiUrl = import.meta.env.VITE_API_URL;
+      
+      if (!apiUrl) {
+        throw new Error('VITE_API_URL is not configured');
+      }
+      
+      // Remove trailing slash if present
+      const cleanApiUrl = apiUrl.replace(/\/$/, '');
+      const googleAuthUrl = `${cleanApiUrl}/auth/google`;
       
       // Store current path for redirect after OAuth
       const currentPath = searchParams.get('redirect') || window.location.pathname;

@@ -278,9 +278,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const loginWithGoogle = async (): Promise<void> => {
     try {
-      // Get backend API URL from environment or use default
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const googleAuthUrl = `${apiUrl}/auth/google`;
+      // Get backend API URL from environment
+      const apiUrl = import.meta.env.VITE_API_URL;
+      
+      if (!apiUrl) {
+        throw new Error('VITE_API_URL is not configured');
+      }
+      
+      // Remove trailing slash if present
+      const cleanApiUrl = apiUrl.replace(/\/$/, '');
+      const googleAuthUrl = `${cleanApiUrl}/auth/google`;
       
       // Redirect to backend Google OAuth endpoint
       // Backend will handle OAuth flow and redirect back to frontend with token

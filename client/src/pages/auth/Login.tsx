@@ -262,7 +262,7 @@ function LoginPage() {
     setErrors({});
 
     try {
-      // Get API URL from environment (should be base URL without /api)
+      // Get API URL from environment
       const apiUrl = import.meta.env.VITE_API_URL;
       
       if (!apiUrl) {
@@ -276,8 +276,7 @@ function LoginPage() {
       const redirectPath = '/student/dashboard';
       
       // Construct Google OAuth URL with encoded redirect
-      // Backend route is /api/auth/google, so we append /api/auth/google
-      const googleAuthUrl = `${cleanApiUrl}/api/auth/google?redirect=${encodeURIComponent(redirectPath)}`;
+      const googleAuthUrl = `${cleanApiUrl}/auth/google?redirect=${encodeURIComponent(redirectPath)}`;
 
       // Redirect to backend Google OAuth endpoint
       window.location.href = googleAuthUrl;
