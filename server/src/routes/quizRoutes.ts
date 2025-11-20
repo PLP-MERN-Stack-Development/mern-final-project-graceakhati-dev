@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { body } from 'express-validator';
 import {
   createQuiz,
@@ -42,35 +42,35 @@ const quizValidation = [
  * @desc    Create a new quiz
  * @access  Private (instructor/admin only)
  */
-router.post('/', authenticate, authorize('instructor', 'admin'), quizValidation, createQuiz);
+router.post('/', authenticate as RequestHandler, authorize('instructor', 'admin') as RequestHandler, quizValidation, createQuiz as RequestHandler);
 
 /**
  * @route   GET /api/quizzes/:id
  * @desc    Get quiz by ID
  * @access  Public
  */
-router.get('/:id', getQuizById);
+router.get('/:id', getQuizById as RequestHandler);
 
 /**
  * @route   GET /api/quizzes/lesson/:lessonId
  * @desc    Get quiz by lesson ID
  * @access  Public
  */
-router.get('/lesson/:lessonId', getQuizByLesson);
+router.get('/lesson/:lessonId', getQuizByLesson as RequestHandler);
 
 /**
  * @route   PUT /api/quizzes/:id
  * @desc    Update a quiz
  * @access  Private (instructor/admin only)
  */
-router.put('/:id', authenticate, authorize('instructor', 'admin'), quizValidation, updateQuiz);
+router.put('/:id', authenticate as RequestHandler, authorize('instructor', 'admin') as RequestHandler, quizValidation, updateQuiz as RequestHandler);
 
 /**
  * @route   DELETE /api/quizzes/:id
  * @desc    Delete a quiz
  * @access  Private (instructor/admin only)
  */
-router.delete('/:id', authenticate, authorize('instructor', 'admin'), deleteQuiz);
+router.delete('/:id', authenticate as RequestHandler, authorize('instructor', 'admin') as RequestHandler, deleteQuiz as RequestHandler);
 
 export default router;
 

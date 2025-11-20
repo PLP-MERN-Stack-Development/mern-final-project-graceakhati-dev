@@ -93,14 +93,25 @@ export const connectDB = async (): Promise<void> => {
     });
 
     // Success message with detailed information
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ MongoDB Connection Successful!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`🌐 Host: ${conn.connection.host}`);
-    console.log(`📊 Database: ${conn.connection.name}`);
-    console.log(`🔌 Port: ${conn.connection.port || 'default'}`);
-    console.log(`👤 User: ${conn.connection.user || 'none'}`);
-    console.log(`🆔 Connection State: ${conn.connection.readyState === 1 ? 'Connected' : conn.connection.readyState}`);
+    
+    if (isProduction) {
+      // Production: Minimal logging
+      console.log(`📊 Database: ${conn.connection.name}`);
+      console.log(`🆔 Connection State: Connected`);
+    } else {
+      // Development: Detailed logging
+      console.log(`🌐 Host: ${conn.connection.host}`);
+      console.log(`📊 Database: ${conn.connection.name}`);
+      console.log(`🔌 Port: ${conn.connection.port || 'default'}`);
+      console.log(`👤 User: ${conn.connection.user || 'none'}`);
+      console.log(`🆔 Connection State: ${conn.connection.readyState === 1 ? 'Connected' : conn.connection.readyState}`);
+    }
+    
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   } catch (error: any) {

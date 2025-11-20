@@ -166,8 +166,18 @@ function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   }
 
   // Get current path for redirect query parameter
+  // Safely encode the path to prevent URI malformed errors
   const currentPath = location.pathname + location.search;
-  const loginRedirectUrl = `/login?redirect=${encodeURIComponent(currentPath)}`;
+  let loginRedirectUrl: string;
+  try {
+    // Validate and encode the path
+    const encodedPath = encodeURIComponent(currentPath);
+    loginRedirectUrl = `/login?redirect=${encodedPath}`;
+  } catch (error) {
+    // Fallback to just pathname if encoding fails
+    console.warn('Failed to encode redirect path, using pathname only:', error);
+    loginRedirectUrl = `/login?redirect=${encodeURIComponent(location.pathname)}`;
+  }
 
   // Logic: If no token -> redirect to /login
   if (!hasToken) {

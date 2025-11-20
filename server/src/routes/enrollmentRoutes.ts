@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import {
   enrollInCourse,
   getUserEnrollments,
@@ -15,14 +15,14 @@ const router = Router();
  * @desc    Enroll user in a course
  * @access  Private
  */
-router.post('/', authenticate, enrollInCourse);
+router.post('/', authenticate as RequestHandler, enrollInCourse as RequestHandler);
 
 /**
  * @route   GET /api/enrollments/user/:userId
  * @desc    Get user's enrollments
  * @access  Private
  */
-router.get('/user/:userId', authenticate, getUserEnrollments);
+router.get('/user/:userId', authenticate as RequestHandler, getUserEnrollments as RequestHandler);
 
 /**
  * @route   GET /api/enrollments/course/:courseId
@@ -31,9 +31,9 @@ router.get('/user/:userId', authenticate, getUserEnrollments);
  */
 router.get(
   '/course/:courseId',
-  authenticate,
-  authorize('instructor', 'admin'),
-  getCourseEnrollments
+  authenticate as RequestHandler,
+  authorize('instructor', 'admin') as RequestHandler,
+  getCourseEnrollments as RequestHandler
 );
 
 /**
@@ -41,14 +41,14 @@ router.get(
  * @desc    Update enrollment progress
  * @access  Private
  */
-router.put('/:id/progress', authenticate, updateEnrollmentProgress);
+router.put('/:id/progress', authenticate as RequestHandler, updateEnrollmentProgress as RequestHandler);
 
 /**
  * @route   DELETE /api/enrollments/:id
  * @desc    Drop enrollment
  * @access  Private
  */
-router.delete('/:id', authenticate, dropEnrollment);
+router.delete('/:id', authenticate as RequestHandler, dropEnrollment as RequestHandler);
 
 export default router;
 

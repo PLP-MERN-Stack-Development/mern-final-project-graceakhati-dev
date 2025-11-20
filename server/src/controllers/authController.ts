@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import User from '../models/User';
@@ -166,9 +166,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  * Get current user profile
  * GET /api/auth/me
  */
-export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    if (!req.user) {
+    // Cast req to AuthRequest to access user property
+    const authReq = req as AuthRequest;
+    
+    if (!authReq.user) {
       res.status(401).json({
         success: false,
         message: 'User not authenticated',
@@ -180,14 +183,14 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       success: true,
       data: {
         user: {
-          id: req.user._id.toString(),
-          name: req.user.name,
-          email: req.user.email,
-          role: req.user.role,
-          xp: req.user.xp,
-          badges: req.user.badges,
-          createdAt: req.user.createdAt,
-          updatedAt: req.user.updatedAt,
+          id: authReq.user._id.toString(),
+          name: authReq.user.name,
+          email: authReq.user.email,
+          role: authReq.user.role,
+          xp: authReq.user.xp,
+          badges: authReq.user.badges,
+          createdAt: authReq.user.createdAt,
+          updatedAt: authReq.user.updatedAt,
         },
       },
     });
@@ -197,6 +200,44 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       success: false,
       message: 'Server error fetching user profile',
       error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined,
+    });
+    next(error);
+  }
+};
+
+/**
+ * Initiate Google OAuth flow
+ * GET /api/auth/google
+ * Redirects user to Google OAuth consent screen
+ */
+export const googleAuthController = (_req: Request, res: Response): void => {
+  try {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_REDIRECT_URI) {
+      res.status(500).json({
+        success: false,
+        message: 'Google OAuth configuration missing',
+      });
+      return;
+    }
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: GOOGLE_REDIRECT_URI,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'consent',
+    })}`;
+
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('Error redirecting to Google OAuth:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to redirect to Google OAuth',
     });
   }
 };

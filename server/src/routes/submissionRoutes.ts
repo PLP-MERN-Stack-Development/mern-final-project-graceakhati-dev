@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import {
   submitAssignment,
   listSubmissionsByAssignment,
@@ -17,7 +17,7 @@ const router = Router();
  */
 router.post(
   '/',
-  authenticate,
+  authenticate as RequestHandler,
   uploadFilesAndImage as any, // Multer middleware type compatibility
   handleUploadError as any, // Error handler middleware type compatibility
   submitAssignment as any // UploadRequest type compatibility
@@ -30,9 +30,9 @@ router.post(
  */
 router.get(
   '/assignment/:assignmentId',
-  authenticate,
-  authorize('instructor', 'admin'),
-  listSubmissionsByAssignment
+  authenticate as RequestHandler,
+  authorize('instructor', 'admin') as RequestHandler,
+  listSubmissionsByAssignment as RequestHandler
 );
 
 /**
@@ -40,14 +40,14 @@ router.get(
  * @desc    Grade a submission
  * @access  Private (instructor/admin only)
  */
-router.put('/:id/grade', authenticate, authorize('instructor', 'admin'), gradeSubmission);
+router.put('/:id/grade', authenticate as RequestHandler, authorize('instructor', 'admin') as RequestHandler, gradeSubmission as RequestHandler);
 
 /**
  * @route   GET /api/submissions/:id
  * @desc    Get submission by ID
  * @access  Private
  */
-router.get('/:id', authenticate, getSubmissionById);
+router.get('/:id', authenticate as RequestHandler, getSubmissionById as RequestHandler);
 
 export default router;
 

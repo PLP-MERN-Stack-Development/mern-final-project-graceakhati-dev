@@ -1,3 +1,14 @@
+# 🚀 Render Deployment - Ready-to-Paste Code
+
+## Complete Code Snippets for Render Deployment
+
+---
+
+## 1. `server/src/server.ts` ✅
+
+**Complete File - Ready to Paste:**
+
+```typescript
 import app from './app';
 import { connectDB } from './config/db';
 
@@ -135,3 +146,205 @@ process.on('SIGINT', () => {
 
 // Start the server
 startServer();
+```
+
+---
+
+## 2. `server/src/app.ts` ✅
+
+**Key Changes - Production Logging Section:**
+
+```typescript
+// Request logging middleware
+// In production, log important requests only
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction) {
+  // Production: Log only important requests
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    // Log API routes and errors
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    }
+    next();
+  });
+} else {
+  // Development: Log all requests
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
+    next();
+  });
+}
+
+// Health check route - Important for Render
+app.get('/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'Planet Path API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+  });
+});
+```
+
+---
+
+## 3. `server/src/routes/authRoutes.ts` ✅
+
+**Complete File - Ready to Paste:**
+
+```typescript
+import { Router } from 'express';
+import { body } from 'express-validator';
+import { register, login, getMe, googleAuthController } from '../controllers/authController';
+import { authenticate } from '../middleware/auth';
+
+const router = Router();
+
+/**
+ * Validation rules for registration
+ */
+const registerValidation = [
+  body('name')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be between 2 and 100 characters'),
+  body('email')
+    .trim()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
+  body('role')
+    .optional()
+    .isIn(['student', 'instructor', 'admin'])
+    .withMessage('Role must be student, instructor, or admin'),
+];
+
+/**
+ * Validation rules for login
+ */
+const loginValidation = [
+  body('email')
+    .trim()
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required'),
+];
+
+/**
+ * @route   POST /api/auth/register
+ * @desc    Register a new user
+ * @access  Public
+ */
+router.post('/register', registerValidation, register);
+
+/**
+ * @route   POST /api/auth/login
+ * @desc    Login user
+ * @access  Public
+ */
+router.post('/login', loginValidation, login);
+
+/**
+ * @route   GET /api/auth/me
+ * @desc    Get current user profile
+ * @access  Private
+ */
+router.get('/me', authenticate, getMe);
+
+/**
+ * @route   GET /api/auth/google
+ * @desc    Initiate Google OAuth flow
+ * @access  Public
+ * 
+ * This route initiates the Google OAuth flow by redirecting to Google's consent screen.
+ * After user authentication, Google redirects to /api/auth/google/callback
+ */
+router.get('/google', googleAuthController);
+
+export default router;
+```
+
+---
+
+## 🔧 Render Environment Variables
+
+**Copy and paste these into Render Environment Variables:**
+
+```env
+# Server (Render sets PORT automatically)
+NODE_ENV=production
+
+# MongoDB
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority
+
+# CORS - Your frontend URL
+CLIENT_URL=https://your-frontend.onrender.com
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-here
+JWT_EXPIRE=7d
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=https://your-backend.onrender.com/api/auth/google/callback
+
+# Frontend URL (for OAuth redirects)
+FRONTEND_URL=https://your-frontend.onrender.com
+```
+
+---
+
+## ✅ Verification Checklist
+
+- [x] Server listens on `process.env.PORT` ✅
+- [x] Server listens on `0.0.0.0` ✅
+- [x] Google OAuth route `/api/auth/google` exists ✅
+- [x] Google OAuth callback route `/api/auth/google/callback` exists ✅
+- [x] Production logging configured ✅
+- [x] MongoDB connection handled ✅
+- [x] Health check endpoint `/health` exists ✅
+- [x] TypeScript compilation successful ✅
+
+---
+
+## 🚀 Render Build Settings
+
+**Build Command:**
+```bash
+npm run build
+```
+
+**Start Command:**
+```bash
+npm start
+```
+
+**Health Check Path:**
+```
+/health
+```
+
+---
+
+## 📝 Summary
+
+✅ **All code ready for Render deployment:**
+- `server.ts` - Fixed port and network binding ✅
+- `app.ts` - Production logging ✅
+- `authRoutes.ts` - Google OAuth route ✅
+- TypeScript compilation successful ✅
+
+**Status:** ✅ **READY FOR RENDER DEPLOYMENT**
+
+---
+
+**Copy and paste the code above into your files! 🚀**
+

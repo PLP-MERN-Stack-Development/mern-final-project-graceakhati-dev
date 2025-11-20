@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import {
   getCertificate,
   getUserCertificates,
@@ -17,7 +17,7 @@ const router = Router();
  * @desc    Generate a certificate for user and course
  * @access  Private
  */
-router.post('/generate', authenticate, generateCertificateNew);
+router.post('/generate', authenticate as RequestHandler, generateCertificateNew as RequestHandler);
 
 /**
  * @route   GET /api/certificates/verify/:certificateId
@@ -25,14 +25,14 @@ router.post('/generate', authenticate, generateCertificateNew);
  * @access  Public
  * NOTE: This route must come before /:id to avoid route conflicts
  */
-router.get('/verify/:certificateId', verifyCertificate);
+router.get('/verify/:certificateId', verifyCertificate as RequestHandler);
 
 /**
  * @route   GET /api/certificates/user/:userId
  * @desc    Get all certificates for a user
  * @access  Private
  */
-router.get('/user/:userId', authenticate, getUserCertificates);
+router.get('/user/:userId', authenticate as RequestHandler, getUserCertificates as RequestHandler);
 
 /**
  * @route   GET /api/certificates/course/:courseId
@@ -41,9 +41,9 @@ router.get('/user/:userId', authenticate, getUserCertificates);
  */
 router.get(
   '/course/:courseId',
-  authenticate,
-  authorize('instructor', 'admin'),
-  getCourseCertificates
+  authenticate as RequestHandler,
+  authorize('instructor', 'admin') as RequestHandler,
+  getCourseCertificates as RequestHandler
 );
 
 /**
@@ -52,7 +52,7 @@ router.get(
  * @access  Private
  * NOTE: This route must come last to avoid conflicts with /verify/:certificateId
  */
-router.get('/:id', authenticate, getCertificate);
+router.get('/:id', authenticate as RequestHandler, getCertificate as RequestHandler);
 
 export default router;
 

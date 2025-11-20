@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import {
   createLesson,
   updateLesson,
@@ -14,28 +14,28 @@ const router = Router();
  * @desc    Create a new lesson
  * @access  Private
  */
-router.post('/', authenticate, createLesson);
+router.post('/', authenticate as RequestHandler, createLesson as RequestHandler);
 
 /**
  * @route   PUT /api/lessons/:id
  * @desc    Update a lesson
  * @access  Private
  */
-router.put('/:id', authenticate, updateLesson);
+router.put('/:id', authenticate as RequestHandler, updateLesson as RequestHandler);
 
 /**
  * @route   DELETE /api/lessons/:id
  * @desc    Delete a lesson
  * @access  Private
  */
-router.delete('/:id', authenticate, deleteLesson);
+router.delete('/:id', authenticate as RequestHandler, deleteLesson as RequestHandler);
 
 /**
  * @route   GET /api/lessons/module/:moduleId
  * @desc    Get lessons by module ID
  * @access  Public
  */
-router.get('/module/:moduleId', getLessonsByModule);
+router.get('/module/:moduleId', getLessonsByModule as RequestHandler);
 
 export default router;
 

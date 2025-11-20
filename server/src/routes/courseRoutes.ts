@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { body, param } from 'express-validator';
 import {
   getCourses,
@@ -104,10 +104,10 @@ router.get('/:id', getCourseById);
  */
 router.post(
   '/',
-  authenticate,
-  authorize('instructor', 'admin'),
+  authenticate as RequestHandler,
+  authorize('instructor', 'admin') as RequestHandler,
   createCourseValidation,
-  createCourse
+  createCourse as RequestHandler
 );
 
 /**
@@ -117,9 +117,9 @@ router.post(
  */
 router.put(
   '/:id',
-  authenticate,
+  authenticate as RequestHandler,
   updateCourseValidation,
-  updateCourse
+  updateCourse as RequestHandler
 );
 
 /**
@@ -127,7 +127,7 @@ router.put(
  * @desc    Delete a course
  * @access  Private (course author, instructor, or admin)
  */
-router.delete('/:id', authenticate, deleteCourse);
+router.delete('/:id', authenticate as RequestHandler, deleteCourse as RequestHandler);
 
 export default router;
 

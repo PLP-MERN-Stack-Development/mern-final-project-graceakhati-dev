@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { body, param } from 'express-validator';
 import {
   createModule,
@@ -48,35 +48,35 @@ const updateModuleValidation = [
  * @desc    Create a new module
  * @access  Private
  */
-router.post('/', authenticate, createModuleValidation, createModule);
+router.post('/', authenticate as RequestHandler, createModuleValidation, createModule as RequestHandler);
 
 /**
  * @route   GET /api/modules/course/:courseId
  * @desc    Get all modules for a course
  * @access  Public
  */
-router.get('/course/:courseId', getModulesByCourse);
+router.get('/course/:courseId', getModulesByCourse as RequestHandler);
 
 /**
  * @route   GET /api/modules/:id
  * @desc    Get module by ID
  * @access  Public
  */
-router.get('/:id', getModuleById);
+router.get('/:id', getModuleById as RequestHandler);
 
 /**
  * @route   PUT /api/modules/:id
  * @desc    Update a module
  * @access  Private
  */
-router.put('/:id', authenticate, updateModuleValidation, updateModule);
+router.put('/:id', authenticate as RequestHandler, updateModuleValidation, updateModule as RequestHandler);
 
 /**
  * @route   DELETE /api/modules/:id
  * @desc    Delete a module
  * @access  Private
  */
-router.delete('/:id', authenticate, deleteModule);
+router.delete('/:id', authenticate as RequestHandler, deleteModule as RequestHandler);
 
 export default router;
 

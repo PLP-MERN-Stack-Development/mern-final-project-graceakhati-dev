@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User';
 
@@ -7,11 +7,6 @@ import User, { IUser } from '../models/User';
  */
 export interface AuthRequest extends Request {
   user?: IUser;
-  headers: Request['headers'] & {
-    authorization?: string;
-  };
-  params: Request['params'];
-  body: Request['body'];
 }
 
 /**
@@ -27,14 +22,13 @@ interface JWTPayload {
  * Authentication Middleware
  * Verifies JWT token and attaches user to request
  */
-export const authenticate = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const authenticate: RequestHandler = async (req, res, next) => {
   try {
+    // Cast req to AuthRequest to access user property
+    const authReq = req as AuthRequest;
+
     // Get token from Authorization header
-    const authHeader = req.headers.authorization;
+    const authHeader = authReq.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       res.status(401).json({
@@ -75,7 +69,7 @@ export const authenticate = async (
     }
 
     // Attach user to request
-    req.user = user;
+    authReq.user = user;
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -108,9 +102,11 @@ export const authenticate = async (
  * @param allowedRoles - Array of allowed roles
  */
 export const authorize =
-  (...allowedRoles: string[]) =>
-  (req: AuthRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
+  (...allowedRoles: string[]): RequestHandler =>
+  (req, res, next) => {
+    const authReq = req as AuthRequest;
+    
+    if (!authReq.user) {
       res.status(401).json({
         success: false,
         message: 'User not authenticated',
@@ -118,7 +114,7 @@ export const authorize =
       return;
     }
 
-    const userRole = req.user.role;
+    const userRole = authReq.user.role;
 
     if (!allowedRoles.includes(userRole)) {
       res.status(403).json({

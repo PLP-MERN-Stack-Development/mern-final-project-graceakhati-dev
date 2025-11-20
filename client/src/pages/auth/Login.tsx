@@ -252,32 +252,38 @@ function LoginPage() {
    * Redirects to backend Google OAuth endpoint
    * After successful login, backend redirects to /dashboard with JWT token
    */
+  /**
+   * Handle Google login
+   * Redirects to backend Google OAuth endpoint
+   * After successful login, backend redirects back to frontend with JWT token
+   */
   const handleGoogleLogin = () => {
     setIsGoogleLoading(true);
     setErrors({});
-    
+
     try {
-      // Get backend API URL from environment or use default
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const googleAuthUrl = `${apiUrl}/auth/google`;
+      // Get API URL from environment (should be base URL without /api)
+      const apiUrl = import.meta.env.VITE_API_URL;
       
-      // Store current path for redirect after OAuth
-      const currentPath = searchParams.get('redirect') || window.location.pathname;
-      const redirectUrl = currentPath !== '/' ? currentPath : '/dashboard';
-      
-      // Redirect to backend Google OAuth endpoint
-      // Backend will handle OAuth flow and redirect back to frontend with token
-      window.location.href = `${googleAuthUrl}?redirect=${encodeURIComponent(redirectUrl)}`;
-    } catch (error: any) {
-      // Display error messages for Google OAuth errors
-      let errorMessage = 'Google login failed. Please try again.';
-      
-      if (error.message) {
-        errorMessage = error.message;
+      if (!apiUrl) {
+        throw new Error('VITE_API_URL is not configured');
       }
       
+      // Remove trailing slash if present
+      const cleanApiUrl = apiUrl.replace(/\/$/, '');
+      
+      // Default redirect path after successful Google OAuth login
+      const redirectPath = '/student/dashboard';
+      
+      // Construct Google OAuth URL with encoded redirect
+      // Backend route is /api/auth/google, so we append /api/auth/google
+      const googleAuthUrl = `${cleanApiUrl}/api/auth/google?redirect=${encodeURIComponent(redirectPath)}`;
+
+      // Redirect to backend Google OAuth endpoint
+      window.location.href = googleAuthUrl;
+    } catch (error: any) {
       setErrors({
-        general: errorMessage,
+        general: error.message || 'Google login failed. Please try again.',
       });
       setIsGoogleLoading(false);
     }

@@ -148,12 +148,42 @@ export async function handleGoogleOAuthCallback(): Promise<void> {
           }
         }
         
-        // Clean URL (remove OAuth params)
-        const cleanUrl = window.location.pathname.split('?')[0];
-        window.history.replaceState({}, '', cleanUrl);
-        
-        // Redirect to intended page
-        window.location.href = redirect;
+        // Validate and sanitize redirect URL to prevent URI malformed errors
+        try {
+          // Ensure redirect is a valid path (starts with /)
+          if (!redirect || !redirect.startsWith('/')) {
+            console.warn('Invalid redirect path, defaulting to /student/dashboard');
+            redirect = '/student/dashboard';
+          }
+          
+          // Decode if already encoded, then validate
+          let decodedRedirect = redirect;
+          try {
+            // Try to decode - if it fails, it's not encoded
+            decodedRedirect = decodeURIComponent(redirect);
+          } catch {
+            // Not encoded, use as-is
+            decodedRedirect = redirect;
+          }
+          
+          // Ensure it's still a valid path after decoding
+          if (!decodedRedirect.startsWith('/')) {
+            decodedRedirect = '/student/dashboard';
+          }
+          
+          // Clean URL (remove OAuth params) before redirecting
+          const cleanUrl = window.location.pathname.split('?')[0];
+          window.history.replaceState({}, '', cleanUrl);
+          
+          // Redirect to intended page (use decoded version)
+          window.location.href = decodedRedirect;
+        } catch (error) {
+          console.error('Error validating redirect URL:', error);
+          // Fallback to safe default
+          const cleanUrl = window.location.pathname.split('?')[0];
+          window.history.replaceState({}, '', cleanUrl);
+          window.location.href = '/student/dashboard';
+        }
       } catch (error) {
         console.error('Error processing OAuth token:', error);
         window.location.href = '/login?error=oauth_processing_failed';

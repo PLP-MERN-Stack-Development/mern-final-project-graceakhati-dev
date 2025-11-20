@@ -1,0 +1,126 @@
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import User from '../models/User';
+
+/**
+ * Passport Google OAuth Strategy Configuration
+ * Only initializes if Google OAuth credentials are provided
+ */
+let GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim();
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim();
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim();
+
+// Fix common mistake: Remove http:// or https:// prefix from Client ID if present
+if (GOOGLE_CLIENT_ID) {
+  GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID.replace(/^https?:\/\//, '');
+}
+
+// Check if all credentials are provided and not empty
+// Also check they're not placeholder values
+const hasGoogleCredentials = 
+  GOOGLE_CLIENT_ID && 
+  GOOGLE_CLIENT_SECRET && 
+  GOOGLE_REDIRECT_URI &&
+  GOOGLE_CLIENT_ID.length > 0 &&
+  GOOGLE_CLIENT_SECRET.length > 0 &&
+  GOOGLE_REDIRECT_URI.length > 0 &&
+  !GOOGLE_CLIENT_ID.includes('<') && // Not a placeholder like <your_google_client_id>
+  !GOOGLE_CLIENT_SECRET.includes('<') &&
+  !GOOGLE_REDIRECT_URI.includes('<') &&
+  !GOOGLE_CLIENT_ID.startsWith('http://') && // Not a URL (common mistake)
+  !GOOGLE_CLIENT_ID.startsWith('https://');
+
+if (hasGoogleCredentials) {
+  try {
+    // Initialize GoogleStrategy only if all credentials are available
+    // Double-check that values are not empty before passing to Strategy
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
+      throw new Error('Google OAuth credentials are incomplete');
+    }
+    
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: GOOGLE_CLIENT_ID,
+          clientSecret: GOOGLE_CLIENT_SECRET,
+          callbackURL: GOOGLE_REDIRECT_URI,
+        },
+      async (_accessToken: string, _refreshToken: string, profile: any, done: (error: any, user?: any) => void) => {
+        try {
+          // Extract user information from Google profile
+          const { id: googleId, emails, name } = profile;
+          const email = emails?.[0]?.value;
+          const displayName = name?.displayName || `${name?.givenName || ''} ${name?.familyName || ''}`.trim();
+
+          if (!email) {
+            return done(new Error('Email not provided by Google'), null);
+          }
+
+          // Find user by email or googleId
+          let user = await User.findOne({
+            $or: [{ email: email.toLowerCase() }, { googleId }],
+          });
+
+          if (user) {
+            // Update googleId if not set
+            if (!user.googleId) {
+              user.googleId = googleId;
+              await user.save();
+            }
+          } else {
+            // Create new user
+            user = new User({
+              name: displayName || email.split('@')[0],
+              email: email.toLowerCase(),
+              password: '', // Google users don't need password
+              googleId,
+              role: 'student',
+              xp: 0,
+              badges: [],
+            });
+            await user.save();
+          }
+
+          return done(null, user);
+        } catch (error) {
+          return done(error, null);
+        }
+      }
+      )
+    );
+    console.log('✅ Google OAuth Strategy initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize Google OAuth Strategy:', error);
+    console.warn('⚠️  Google OAuth will be disabled.');
+  }
+} else {
+  // Log warning but don't crash - Google OAuth is optional
+  console.warn('⚠️  Google OAuth credentials not found. Google login will be disabled.');
+  console.warn('💡 To enable Google OAuth, set the following environment variables:');
+  console.warn('   - GOOGLE_CLIENT_ID');
+  console.warn('   - GOOGLE_CLIENT_SECRET');
+  console.warn('   - GOOGLE_REDIRECT_URI');
+  console.warn('💡 Make sure these are set in your .env file or environment variables.');
+}
+
+/**
+ * Serialize user for session (not used with JWT, but required by Passport)
+ */
+passport.serializeUser((user: any, done: (err: any, id?: any) => void) => {
+  done(null, user._id);
+});
+
+/**
+ * Deserialize user from session (not used with JWT, but required by Passport)
+ */
+passport.deserializeUser(async (id: string, done: (err: any, user?: any) => void) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
+
+export default passport;
+
