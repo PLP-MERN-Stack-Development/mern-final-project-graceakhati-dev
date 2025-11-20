@@ -393,42 +393,42 @@ mern-final-project-graceakhati-dev/
 
 #### 1. Clone the Repository
 
-```bash
-git clone https://github.com/PLP-MERN-Stack-Development/mern-final-project-graceakhati-dev.git
-cd mern-final-project-graceakhati-dev
-```
+   ```bash
+   git clone https://github.com/PLP-MERN-Stack-Development/mern-final-project-graceakhati-dev.git
+   cd mern-final-project-graceakhati-dev
+   ```
 
 #### 2. Install Dependencies
-
+   
 **Option A: Install from root (recommended)**
-```bash
-npm install
-```
-
+   ```bash
+   npm install
+   ```
+   
 **Option B: Install individually**
-```bash
+   ```bash
 # Backend dependencies
-cd server
-npm install
-
+   cd server
+   npm install
+   
 # Frontend dependencies
 cd ../client
-npm install
-```
+   npm install
+   ```
 
 #### 3. Environment Variables Setup
-
+   
 **Backend Environment Variables** (`server/.env`)
-
+   
 Create a `.env` file in the `server` directory:
 
-```env
+   ```env
 # Server Configuration
-NODE_ENV=development
-PORT=5000
+   NODE_ENV=development
+   PORT=5000
 
 # MongoDB Configuration
-MONGODB_URI=your_mongodb_atlas_connection_string
+   MONGODB_URI=your_mongodb_atlas_connection_string
 # Example: mongodb+srv://username:password@cluster.mongodb.net/planetpath?retryWrites=true&w=majority
 
 # JWT Authentication
@@ -444,7 +444,7 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
 
 # Redis (Optional - for caching)
-REDIS_URL=your_redis_connection_string
+   REDIS_URL=your_redis_connection_string
 
 # File Upload (Optional - for S3)
 AWS_ACCESS_KEY_ID=
@@ -457,11 +457,11 @@ AWS_S3_BUCKET=
 
 Create a `.env` file in the `client` directory:
 
-```env
+   ```env
 # API Configuration
-VITE_API_URL=http://localhost:5000
-VITE_SOCKET_URL=http://localhost:5001
-```
+   VITE_API_URL=http://localhost:5000
+   VITE_SOCKET_URL=http://localhost:5001
+   ```
 
 #### 4. Database Setup
 
@@ -486,23 +486,23 @@ mongod
 #### 5. Run Development Servers
 
 **Option A: Run both servers from root**
-```bash
-npm run dev
-```
-
+   ```bash
+   npm run dev
+   ```
+   
 **Option B: Run servers individually**
 
 **Backend Server:**
-```bash
-cd server
-npm run dev
+   ```bash
+   cd server
+   npm run dev
 # Server runs on http://localhost:5000
 ```
-
+   
 **Frontend Server:**
 ```bash
-cd client
-npm run dev
+   cd client
+   npm run dev
 # Frontend runs on http://localhost:5173
 ```
 
