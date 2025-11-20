@@ -103,3 +103,6 @@ Desktop.ini
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+.env
+node_modules/
+dist/
