@@ -11,7 +11,7 @@
 - ✅ `NODE_ENV=development` - Environment mode
 - ✅ `MONGO_URI=mongodb://localhost:27017/planetpath` - MongoDB connection
 - ✅ `MONGODB_URI=mongodb://localhost:27017/planetpath` - Alternative MongoDB URI (backward compatibility)
-- ✅ `JWT_SECRET=supersecretkey123` - JWT token secret
+- ✅ `JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-characters` - JWT token secret
 - ✅ `JWT_EXPIRE=7d` - JWT token expiration
 - ✅ `CLIENT_URL=http://localhost:3001` - Frontend URL for CORS
 - ✅ `FRONTEND_URL=http://localhost:3001` - Frontend URL for redirects

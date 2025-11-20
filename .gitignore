@@ -15,6 +15,17 @@ node_modules/
 .env.production.local
 .env*.local
 
+# Sensitive files - NEVER commit these
+passwords.txt
+secrets.txt
+*.key
+*.pem
+*.cert
+*.p12
+*.pfx
+credentials.json
+service-account.json
+
 # Build outputs
 dist/
 build/

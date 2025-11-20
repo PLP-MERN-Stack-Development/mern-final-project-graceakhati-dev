@@ -14,8 +14,10 @@ A cryptographically secure JWT secret has been generated and updated in `server/
 ### Generated Secret
 
 ```
-cb0b59f1ab81403cec59602da05df319ede8aea93f11799f4a2b9b28e8994b22410383dfd6c10f721d720d0b8c24217502a4156990e8a4b34abf7a02e31ab742
+YOUR_JWT_SECRET_HERE
 ```
+
+**Note:** The actual secret has been removed from this file for security. Generate your own secret using the commands below.
 
 ### Security Notes
 
