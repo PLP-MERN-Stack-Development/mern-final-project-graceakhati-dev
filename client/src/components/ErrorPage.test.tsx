@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import ErrorPage from './errorpage';
+import ErrorPage from './ErrorPage';
 
 // Helper to render with router
 const renderWithRouter = (props = {}) => {

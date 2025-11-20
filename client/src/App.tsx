@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Layout from './components/layout/layout';
-import ProtectedRoute from './components/auth/protectedroute';
-import ErrorBoundary from './components/errorboundary';
-import ErrorPage from './components/errorpage';
+import Layout from './components/Layout/Layout';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import ErrorPage from './components/ErrorPage';
 import Landing from './pages/Landing';
 import Catalog from './pages/Catalog';
 import Login from './pages/auth/Login';
@@ -54,6 +54,10 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* OAuth Callback Routes - Handled by googleOAuthCallback utility */}
+            <Route path="/auth/success" element={<Navigate to="/" replace />} />
+            <Route path="/auth/error" element={<Navigate to="/login" replace />} />
             
             {/* Protected Catalog Route - Accessible to all authenticated users */}
             <Route

@@ -1,21 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import Layout, { LayoutProps } from './layout/layout';
+import Layout, { LayoutProps } from './Layout/Layout';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthContextType } from '@/context/AuthContext';
 
 // Mock Footer component
-// layout.tsx is at components/layout/layout.tsx and imports './footer'
-// So footer is at components/layout/footer.tsx
-// Test is at components/layout.test.tsx, so we mock './layout/footer'
-vi.mock('./layout/footer', () => {
+vi.mock('./Layout/Footer', () => {
   const Footer = () => <footer data-testid="footer">Footer</footer>;
   return { default: Footer };
 });
 
 // Mock NavBar component
-vi.mock('../navbar', () => ({
+vi.mock('../NavBar', () => ({
   default: ({ currentPage }: { currentPage?: string }) => (
     <nav data-testid="navbar">NavBar {currentPage}</nav>
   ),

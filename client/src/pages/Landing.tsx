@@ -1,6 +1,6 @@
-import HeroSection from '@/components/herosection';
-import YouthSection from '@/components/youthsection';
-import GreenEnergyIcons from '@/components/greenenergyicons';
+import HeroSection from '@/components/HeroSection';
+import YouthSection from '@/components/YouthSection';
+import GreenEnergyIcons from '@/components/GreenEnergyIcons';
 
 function Landing() {
   return (

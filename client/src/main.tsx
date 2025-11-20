@@ -6,7 +6,10 @@ import './index.css';
 
 // Handle Google OAuth callback on app initialization
 if (typeof window !== 'undefined') {
-  handleGoogleOAuthCallback();
+  // Call async function without blocking
+  handleGoogleOAuthCallback().catch((error) => {
+    console.error('Failed to handle Google OAuth callback:', error);
+  });
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

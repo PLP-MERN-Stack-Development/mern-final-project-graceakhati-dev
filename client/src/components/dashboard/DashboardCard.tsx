@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import Card from '@/components/card';
+import Card from '@/components/Card';
 
 export interface DashboardCardProps {
   /**

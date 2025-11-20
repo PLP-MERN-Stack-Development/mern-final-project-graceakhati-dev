@@ -1,4 +1,4 @@
-import Card from '@/components/card';
+import Card from '@/components/Card';
 import { useCourseStore } from '@/store/useCourseStore';
 
 function AdminReports() {

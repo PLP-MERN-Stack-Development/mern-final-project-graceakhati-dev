@@ -3,8 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import courseService, { Course } from '@/services/courseService';
 import submissionService, { Submission } from '@/services/submissionService';
 import { useAuthStore } from '@/store/useAuthStore';
-import SubmitProjectModal from '@/components/submitprojectmodal';
-import ProtectedButton from '@/components/auth/protectedbutton';
+import SubmitProjectModal from '@/components/SubmitProjectModal';
+import ProtectedButton from '@/components/auth/ProtectedButton';
 
 /**
  * CoursePlayer - Page for viewing a course with enroll and submit project functionality

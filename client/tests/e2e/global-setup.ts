@@ -15,7 +15,7 @@ async function globalSetup(config: FullConfig) {
   // Load environment variables
   dotenv.config({ path: path.resolve(__dirname, '../../.env.test') });
 
-  const baseURL = config.projects[0]?.use?.baseURL || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000';
+  const baseURL = config.projects[0]?.use?.baseURL || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3001';
   const apiURL = process.env.VITE_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   console.log('🔧 Playwright Global Setup: Creating test users...');

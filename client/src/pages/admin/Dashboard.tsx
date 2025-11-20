@@ -1,6 +1,6 @@
 import { useCourseStore, Course } from '@/store/useCourseStore';
-import Card from '@/components/card';
-import ImageLoader from '@/components/imageloader';
+import Card from '@/components/Card';
+import ImageLoader from '@/components/ImageLoader';
 
 /**
  * Get status badge color

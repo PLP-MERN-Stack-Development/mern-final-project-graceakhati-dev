@@ -436,7 +436,7 @@ JWT_SECRET=your_super_secret_jwt_key_minimum_32_characters_long
 JWT_EXPIRE=7d
 
 # CORS Configuration
-CLIENT_URL=http://localhost:5173
+CLIENT_URL=http://localhost:3001
 
 # Google OAuth (Optional)
 GOOGLE_CLIENT_ID=your_google_client_id
@@ -503,12 +503,12 @@ npm run dev
 ```bash
 cd client
 npm run dev
-# Frontend runs on http://localhost:5173
+# Frontend runs on http://localhost:3001
 ```
 
 #### 6. Access the Application
 
-- **Frontend**: http://localhost:5173
+- **Frontend**: http://localhost:3001
 - **Backend API**: http://localhost:5000
 - **Health Check**: http://localhost:5000/health
 - **API Documentation**: See `server/docs/API_DOCUMENTATION.md`

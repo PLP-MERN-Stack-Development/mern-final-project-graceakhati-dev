@@ -1,5 +1,5 @@
-import ProtectedLink from './auth/protectedlink';
-import ImageLoader from './imageloader';
+import ProtectedLink from './auth/ProtectedLink';
+import ImageLoader from './ImageLoader';
 
 export interface CourseCardProps {
   id: string;

@@ -75,7 +75,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-characters
 JWT_EXPIRE=7d
 
 # CORS Configuration
-CLIENT_URL=http://localhost:5173
+CLIENT_URL=http://localhost:3001
 
 # Application Configuration
 APP_NAME=Planet Path

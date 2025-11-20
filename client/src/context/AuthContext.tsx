@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import authService from '@/services/authService';
 
 /**
  * User roles available in Planet Path
@@ -160,176 +161,133 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Login function
    * 
-   * Simulates authentication - replace with real API call.
-   * 
-   * TODO: Replace with actual backend API call:
-   * ```typescript
-   * const response = await fetch('/api/auth/login', {
-   *   method: 'POST',
-   *   headers: { 'Content-Type': 'application/json' },
-   *   body: JSON.stringify({ email, password })
-   * });
-   * 
-   * if (!response.ok) {
-   *   throw new Error('Login failed');
-   * }
-   * 
-   * const data = await response.json();
-   * return { user: data.user, token: data.token };
-   * ```
+   * Authenticates user with backend API using email and password.
    */
   const login = async (credentials: LoginCredentials): Promise<void> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Mock authentication - always succeeds
-    // TODO: Replace with real backend authentication
-    // In real app, backend would return user with role
-    const mockUser: AuthUser = {
-      id: `u-${Date.now()}`,
-      name: credentials.email.split('@')[0], // Extract name from email
-      email: credentials.email,
-      role: 'student', // Default role - backend should return actual role
-    };
-
-    // Generate mock token (in real app, this comes from backend)
-    const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // Update state
-    setUser(mockUser);
-    setToken(mockToken);
-
-    // Persist to localStorage (using same key as Zustand store)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      user: mockUser,
-      token: mockToken,
-      isAuthenticated: true,
-      role: mockUser.role,
-    }));
-
-    // Sync with Zustand store
     try {
-      const authStore = useAuthStore.getState();
-      if (authStore && typeof authStore.loginWithUser === 'function') {
-        authStore.loginWithUser(mockUser, mockToken);
+      // Call backend API via authService
+      const { user, token } = await authService.login(
+        credentials.email.trim(),
+        credentials.password
+      );
+
+      // Normalize user data
+      const authUser: AuthUser = {
+        id: user._id || user.id || '',
+        name: user.name || '',
+        email: user.email || '',
+        role: (user.role as UserRole) || 'student',
+        googleId: user.googleId,
+        xp: user.xp,
+        badges: user.badges,
+        _id: user._id,
+      };
+
+      // Update state
+      setUser(authUser);
+      setToken(token);
+
+      // Persist to localStorage (using same key as Zustand store)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        user: authUser,
+        token,
+        isAuthenticated: true,
+        role: authUser.role,
+      }));
+
+      // Sync with Zustand store
+      try {
+        const authStore = useAuthStore.getState();
+        if (authStore && typeof authStore.loginWithUser === 'function') {
+          authStore.loginWithUser(authUser, token);
+        }
+      } catch (storeError) {
+        // Silently fail if store is not available
       }
-    } catch (storeError) {
-      // Silently fail if store is not available
+    } catch (error: any) {
+      // Re-throw error for component handling
+      throw error;
     }
   };
 
   /**
    * Signup function
    * 
-   * Simulates user registration - replace with real API call.
-   * 
-   * TODO: Replace with actual backend API call:
-   * ```typescript
-   * const response = await fetch('/api/auth/signup', {
-   *   method: 'POST',
-   *   headers: { 'Content-Type': 'application/json' },
-   *   body: JSON.stringify({ fullName, email, password, role })
-   * });
-   * 
-   * if (!response.ok) {
-   *   throw new Error('Signup failed');
-   * }
-   * 
-   * const data = await response.json();
-   * return { user: data.user, token: data.token };
-   * ```
+   * Registers a new user with backend API.
    */
   const signup = async (credentials: SignupCredentials): Promise<void> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Validate passwords match
-    if (credentials.password !== credentials.confirmPassword) {
-      throw new Error('Passwords do not match');
-    }
-
-    // Mock user creation - always succeeds
-    // TODO: Replace with real backend registration
-    const mockUser: AuthUser = {
-      id: `u-${Date.now()}`,
-      name: credentials.fullName,
-      email: credentials.email,
-      role: credentials.role,
-    };
-
-    // Generate mock token (in real app, this comes from backend)
-    const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    // Update state
-    setUser(mockUser);
-    setToken(mockToken);
-
-    // Persist to localStorage (using same key as Zustand store)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      user: mockUser,
-      token: mockToken,
-      isAuthenticated: true,
-      role: mockUser.role,
-    }));
-
-    // Sync with Zustand store
     try {
-      const authStore = useAuthStore.getState();
-      if (authStore && typeof authStore.loginWithUser === 'function') {
-        authStore.loginWithUser(mockUser, mockToken);
+      // Validate passwords match
+      if (credentials.password !== credentials.confirmPassword) {
+        throw new Error('Passwords do not match');
       }
-    } catch (storeError) {
-      // Silently fail if store is not available
+
+      // Call backend API via authService
+      const { user, token } = await authService.signup(
+        credentials.fullName.trim(),
+        credentials.email.trim(),
+        credentials.password,
+        credentials.role
+      );
+
+      // Normalize user data
+      const authUser: AuthUser = {
+        id: user._id || user.id || '',
+        name: user.name || '',
+        email: user.email || '',
+        role: (user.role as UserRole) || credentials.role,
+        googleId: user.googleId,
+        xp: user.xp,
+        badges: user.badges,
+        _id: user._id,
+      };
+
+      // Update state
+      setUser(authUser);
+      setToken(token);
+
+      // Persist to localStorage (using same key as Zustand store)
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        user: authUser,
+        token,
+        isAuthenticated: true,
+        role: authUser.role,
+      }));
+
+      // Sync with Zustand store
+      try {
+        const authStore = useAuthStore.getState();
+        if (authStore && typeof authStore.loginWithUser === 'function') {
+          authStore.loginWithUser(authUser, token);
+        }
+      } catch (storeError) {
+        // Silently fail if store is not available
+      }
+    } catch (error: any) {
+      // Re-throw error for component handling
+      throw error;
     }
   };
 
   /**
    * Login with Google
    * 
-   * Simulates Google OAuth authentication - replace with real OAuth flow.
-   * 
-   * TODO: Replace with actual Google OAuth implementation:
-   * ```typescript
-   * // Use Google OAuth library (e.g., @react-oauth/google)
-   * const response = await googleAuth.signIn();
-   * const user = await fetchUserInfo(response.access_token);
-   * // Backend should handle user creation/login
-   * ```
+   * Redirects to backend Google OAuth endpoint.
+   * The backend handles the OAuth flow and redirects back to frontend with token.
+   * Token handling is done by handleGoogleOAuthCallback() utility function.
    */
   const loginWithGoogle = async (): Promise<void> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Mock Google authentication
-    // TODO: Replace with real Google OAuth
-    const mockUser: AuthUser = {
-      id: `u-google-${Date.now()}`,
-      name: 'Google User',
-      email: 'google@example.com',
-      role: 'student', // Backend should determine role
-    };
-
-    const mockToken = `google_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    setUser(mockUser);
-    setToken(mockToken);
-
-    // Persist to localStorage (using same key as Zustand store)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      user: mockUser,
-      token: mockToken,
-      isAuthenticated: true,
-      role: mockUser.role,
-    }));
-
-    // Sync with Zustand store
     try {
-      const authStore = useAuthStore.getState();
-      if (authStore && typeof authStore.loginWithUser === 'function') {
-        authStore.loginWithUser(mockUser, mockToken);
-      }
-    } catch (storeError) {
-      // Silently fail if store is not available
+      // Get backend API URL from environment or use default
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const googleAuthUrl = `${apiUrl}/auth/google`;
+      
+      // Redirect to backend Google OAuth endpoint
+      // Backend will handle OAuth flow and redirect back to frontend with token
+      window.location.href = googleAuthUrl;
+    } catch (error: any) {
+      // Re-throw error for component handling
+      throw new Error(error.message || 'Google login failed. Please try again.');
     }
   };
 

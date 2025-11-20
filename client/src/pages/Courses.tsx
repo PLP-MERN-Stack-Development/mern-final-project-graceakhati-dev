@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import courseService, { Course } from '@/services/courseService';
-import CourseCard from '@/components/coursecard';
+import CourseCard from '@/components/CourseCard';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /**

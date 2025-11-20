@@ -139,7 +139,7 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
     const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
     const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
       console.error('Missing Google OAuth environment variables');
@@ -319,7 +319,7 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
     res.redirect(`${FRONTEND_URL}/auth/success?token=${encodeURIComponent(token)}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
     const errorMessage: string = error instanceof Error ? error.message : 'Unknown error occurred';
     res.redirect(
       `${FRONTEND_URL}/auth/error?error=${encodeURIComponent(errorMessage)}`

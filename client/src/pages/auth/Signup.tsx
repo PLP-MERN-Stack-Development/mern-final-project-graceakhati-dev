@@ -2,8 +2,8 @@ import { useState, FormEvent, useEffect, useCallback } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import authService from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
-import ImageLoader from '@/components/imageloader';
-import GoogleLoginButton from '@/components/auth/googleloginbutton';
+import ImageLoader from '@/components/ImageLoader';
+import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { uiIllustrations } from '@/utils/imagePaths';
 
 type UserRole = 'student' | 'instructor' | 'admin';

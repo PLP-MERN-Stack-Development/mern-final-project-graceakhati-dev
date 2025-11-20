@@ -1,4 +1,4 @@
-import ImageLoader from './imageloader';
+import ImageLoader from './ImageLoader';
 import { uiIllustrations } from '@/utils/imagePaths';
 
 export type EmptyStateType = 'courses' | 'projects' | 'progress' | 'notifications';

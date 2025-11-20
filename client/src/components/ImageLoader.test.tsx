@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import ImageLoader from './imageloader';
+import ImageLoader from './ImageLoader';
 
 describe('ImageLoader', () => {
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import ProtectedLink from './auth/protectedlink';
-import ImageLoader from './imageloader';
+import ProtectedLink from './auth/ProtectedLink';
+import ImageLoader from './ImageLoader';
 import { heroImages } from '@/utils/imagePaths';
 
 /**

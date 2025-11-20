@@ -1,4 +1,4 @@
-import ImageLoader from './imageloader';
+import ImageLoader from './ImageLoader';
 import { heroIcons } from '@/utils/imagePaths';
 
 /**

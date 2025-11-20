@@ -1,4 +1,4 @@
-import ImageLoader from '../imageloader';
+import ImageLoader from '../ImageLoader';
 
 export interface GoogleLoginButtonProps {
   /**

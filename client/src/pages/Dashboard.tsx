@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ImageLoader from '@/components/imageloader';
+import ImageLoader from '@/components/ImageLoader';
 import {
   dashboardBadges,
   dashboardAvatars,

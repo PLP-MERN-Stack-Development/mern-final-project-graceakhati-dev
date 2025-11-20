@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Card from '@/components/card';
-import EmptyState from '@/components/emptystate';
+import Card from '@/components/Card';
+import EmptyState from '@/components/EmptyState';
 
 // Mock users data - replace with real data from backend
 const mockUsers = [
