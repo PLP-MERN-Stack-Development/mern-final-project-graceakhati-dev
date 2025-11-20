@@ -1,7 +1,6 @@
 import { Router, RequestHandler } from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe } from '../controllers/authController';
-import { googleAuth, googleAuthCallback } from '../controllers/googleAuthController';
+import { register, login, getMe, googleAuthController } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -71,16 +70,6 @@ router.get('/me', authenticate as RequestHandler, getMe as RequestHandler);
  * This route initiates the Google OAuth flow by redirecting to Google's consent screen.
  * After user authentication, Google redirects to /api/auth/google/callback
  */
-router.get('/google', googleAuth);
-
-/**
- * @route   GET /api/auth/google/callback
- * @desc    Handle Google OAuth callback
- * @access  Public
- * 
- * This route handles the callback from Google OAuth.
- * It processes the authentication and redirects to frontend with JWT token.
- */
-router.get('/google/callback', googleAuthCallback);
+router.get('/google', googleAuthController);
 
 export default router;
