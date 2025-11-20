@@ -3,7 +3,6 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import authService from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
 import ImageLoader from '@/components/ImageLoader';
-import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { uiIllustrations } from '@/utils/imagePaths';
 
 /**
@@ -34,7 +33,6 @@ function LoginPage() {
   }>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   /**
    * Save auth data to localStorage
@@ -247,46 +245,6 @@ function LoginPage() {
     }
   };
 
-  /**
-   * Handle Google login
-   * Redirects to backend Google OAuth endpoint
-   * After successful login, backend redirects to /dashboard with JWT token
-   */
-  /**
-   * Handle Google login
-   * Redirects to backend Google OAuth endpoint
-   * After successful login, backend redirects back to frontend with JWT token
-   */
-  const handleGoogleLogin = () => {
-    setIsGoogleLoading(true);
-    setErrors({});
-
-    try {
-      // Get API URL from environment
-      const apiUrl = import.meta.env.VITE_API_URL;
-      
-      if (!apiUrl) {
-        throw new Error('VITE_API_URL is not configured');
-      }
-      
-      // Remove trailing slash if present
-      const cleanApiUrl = apiUrl.replace(/\/$/, '');
-      
-      // Default redirect path after successful Google OAuth login
-      const redirectPath = '/student/dashboard';
-      
-      // Construct Google OAuth URL with encoded redirect
-      const googleAuthUrl = `${cleanApiUrl}/auth/google?redirect=${encodeURIComponent(redirectPath)}`;
-
-      // Redirect to backend Google OAuth endpoint
-      window.location.href = googleAuthUrl;
-    } catch (error: any) {
-      setErrors({
-        general: error.message || 'Google login failed. Please try again.',
-      });
-      setIsGoogleLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-light-sand via-soft-white to-light-sand">
@@ -326,25 +284,6 @@ function LoginPage() {
               </div>
             )}
 
-            {/* Google Login Button */}
-            <div className="mb-6">
-              <GoogleLoginButton
-                text="Continue with Google"
-                onClick={handleGoogleLogin}
-                disabled={isSubmitting || isGoogleLoading}
-                isLoading={isGoogleLoading}
-              />
-            </div>
-
-            {/* Divider */}
-            <div className="relative mb-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-leaf-green/30"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-soft-white text-earth-brown font-medium">Or continue with email</span>
-              </div>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email Field */}
@@ -368,7 +307,7 @@ function LoginPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your email"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.email && (
@@ -397,7 +336,7 @@ function LoginPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your password"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.password && (
@@ -409,9 +348,9 @@ function LoginPage() {
               <button
                 type="submit"
                 data-testid="login-submit"
-                disabled={isSubmitting || isGoogleLoading}
+                disabled={isSubmitting}
                 className={`w-full px-6 py-4 bg-forest-green text-soft-white rounded-lg font-playful text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl ${
-                  isSubmitting || isGoogleLoading
+                  isSubmitting
                     ? 'opacity-50 cursor-not-allowed hover:scale-100'
                     : 'hover:bg-forest-green/90 hover:shadow-2xl animate-motion-subtle'
                 }`}

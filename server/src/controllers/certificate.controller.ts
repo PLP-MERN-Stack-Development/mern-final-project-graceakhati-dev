@@ -36,7 +36,7 @@ export const generateCertificate = async (
     }
 
     // Check if user is authorized (can only generate for themselves unless admin/instructor)
-    const requestingUserId = req.user._id.toString();
+    const requestingUserId = req.user.id;
     const isAdminOrInstructor = ['admin', 'instructor'].includes(req.user.role);
 
     if (userId !== requestingUserId && !isAdminOrInstructor) {
@@ -143,7 +143,7 @@ export const getCertificate = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const userId = req.user._id.toString();
+    const userId = req.user.id;
     // certificate.userId is Types.ObjectId, safe to call toString()
     const certificateUserId = certificate.userId instanceof Types.ObjectId
       ? certificate.userId.toString()
@@ -203,7 +203,7 @@ export const getUserCertificates = async (
       return;
     }
 
-    const requestingUserId = req.user._id.toString();
+    const requestingUserId = req.user.id;
     const isAdminOrInstructor = ['admin', 'instructor'].includes(req.user.role);
 
     if (userId !== requestingUserId && !isAdminOrInstructor) {

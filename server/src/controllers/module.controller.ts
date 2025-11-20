@@ -46,7 +46,7 @@ export const createModule = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Check authorization (instructor/admin or course author)
-    const userId = req.user._id.toString();
+    const userId = req.user.id;
     const isAuthor = course.authorId.toString() === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
@@ -214,7 +214,7 @@ export const updateModule = async (req: AuthRequest, res: Response): Promise<voi
       const populatedCourse = module.courseId as unknown as ICourse;
       courseAuthorId = populatedCourse.authorId.toString();
     }
-    const userId = req.user._id.toString();
+    const userId = req.user.id;
     const isAuthor = courseAuthorId === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
@@ -294,7 +294,7 @@ export const deleteModule = async (req: AuthRequest, res: Response): Promise<voi
       const populatedCourse = module.courseId as unknown as ICourse;
       courseAuthorId = populatedCourse.authorId.toString();
     }
-    const userId = req.user._id.toString();
+    const userId = req.user.id;
     const isAuthor = courseAuthorId === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 

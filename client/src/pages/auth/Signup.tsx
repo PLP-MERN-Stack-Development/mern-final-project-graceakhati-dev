@@ -3,7 +3,6 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import authService from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
 import ImageLoader from '@/components/ImageLoader';
-import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { uiIllustrations } from '@/utils/imagePaths';
 
 type UserRole = 'student' | 'instructor' | 'admin';
@@ -41,7 +40,6 @@ function SignupPage() {
   }>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   /**
    * Save auth data to localStorage
@@ -272,48 +270,6 @@ function SignupPage() {
     }
   };
 
-  /**
-   * Handle Google signup
-   * Redirects to backend Google OAuth endpoint
-   * After successful signup, backend redirects to /dashboard with JWT token
-   */
-  const handleGoogleSignup = () => {
-    setIsGoogleLoading(true);
-    setErrors({});
-    
-    try {
-      // Get backend API URL from environment
-      const apiUrl = import.meta.env.VITE_API_URL;
-      
-      if (!apiUrl) {
-        throw new Error('VITE_API_URL is not configured');
-      }
-      
-      // Remove trailing slash if present
-      const cleanApiUrl = apiUrl.replace(/\/$/, '');
-      const googleAuthUrl = `${cleanApiUrl}/auth/google`;
-      
-      // Store current path for redirect after OAuth
-      const currentPath = searchParams.get('redirect') || window.location.pathname;
-      const redirectUrl = currentPath !== '/' ? currentPath : '/dashboard';
-      
-      // Redirect to backend Google OAuth endpoint
-      // Backend will handle OAuth flow and redirect back to frontend with token
-      window.location.href = `${googleAuthUrl}?redirect=${encodeURIComponent(redirectUrl)}`;
-    } catch (error: any) {
-      // Display error messages for Google OAuth errors
-      let errorMessage = 'Google signup failed. Please try again.';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      setErrors({
-        general: errorMessage,
-      });
-      setIsGoogleLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-light-sand via-soft-white to-light-sand">
@@ -353,25 +309,6 @@ function SignupPage() {
               </div>
             )}
 
-            {/* Google Signup Button */}
-            <div className="mb-6">
-              <GoogleLoginButton
-                text="Sign up with Google"
-                onClick={handleGoogleSignup}
-                disabled={isSubmitting || isGoogleLoading}
-                isLoading={isGoogleLoading}
-              />
-            </div>
-
-            {/* Divider */}
-            <div className="relative mb-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-leaf-green/30"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-soft-white text-earth-brown font-medium">Or sign up with email</span>
-              </div>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Full Name Field */}
@@ -394,7 +331,7 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your full name"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.fullName && (
@@ -423,7 +360,7 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Enter your email"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.email && (
@@ -452,7 +389,7 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Create a password"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.password && (
@@ -480,7 +417,7 @@ function SignupPage() {
                       : 'border-leaf-green/40 focus:border-leaf-green focus:ring-leaf-green/20 bg-white'
                   }`}
                   placeholder="Confirm your password"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                   required
                 />
                 {errors.confirmPassword && (
@@ -502,7 +439,7 @@ function SignupPage() {
                   value={formData.role}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border-2 border-leaf-green/40 rounded-lg focus:outline-none focus:border-leaf-green focus:ring-2 focus:ring-leaf-green/20 transition-all duration-200 bg-white hover:border-leaf-green/60"
-                  disabled={isSubmitting || isGoogleLoading}
+                  disabled={isSubmitting}
                 >
                   <option value="student">Student</option>
                   <option value="instructor">Instructor</option>
@@ -514,9 +451,9 @@ function SignupPage() {
               <button
                 type="submit"
                 data-testid="signup-submit"
-                disabled={isSubmitting || isGoogleLoading}
+                disabled={isSubmitting}
                 className={`w-full px-6 py-4 bg-forest-green text-soft-white rounded-lg font-playful text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl ${
-                  isSubmitting || isGoogleLoading
+                  isSubmitting
                     ? 'opacity-50 cursor-not-allowed hover:scale-100'
                     : 'hover:bg-forest-green/90 hover:shadow-2xl animate-motion-subtle'
                 }`}

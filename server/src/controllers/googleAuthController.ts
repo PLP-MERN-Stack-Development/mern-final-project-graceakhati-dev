@@ -66,7 +66,7 @@ export const googleAuthCallback = (req: Request, res: Response) => {
 
     try {
       // Generate JWT token
-      const token = generateToken(user._id.toString(), user.email, user.role);
+      const token = generateToken(user.id, user.email, user.role);
 
       // Get redirect URL from query params or use default
       const redirectParam = req.query.redirect as string | undefined;

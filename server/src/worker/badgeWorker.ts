@@ -1,7 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { getRedisClient } from '../services/redis.service';
 import User from '../models/User';
-import mongoose from 'mongoose';
 
 /**
  * Event Types
@@ -210,21 +209,20 @@ async function handleModuleCompleted(payload: EventPayload): Promise<void> {
  */
 export async function addXp(userId: string, xp: number): Promise<number> {
   try {
-    // Validate userId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    // Validate userId (Firestore IDs are strings)
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
       throw new Error('Invalid userId format');
     }
 
-    // Update MongoDB User model
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $inc: { xp } },
-      { new: true }
-    );
-
-    if (!user) {
+    // Get current user
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
       throw new Error(`User not found: ${userId}`);
     }
+
+    // Increment XP
+    const newXp = (currentUser.xp || 0) + xp;
+    const user = await User.update(userId, { xp: newXp });
 
     // Update Redis leaderboard (if Redis is available)
     try {
@@ -255,22 +253,26 @@ export async function addXp(userId: string, xp: number): Promise<number> {
  */
 export async function awardBadge(userId: string, badgeName: string): Promise<string[]> {
   try {
-    // Validate userId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    // Validate userId (Firestore IDs are strings)
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
       throw new Error('Invalid userId format');
     }
 
-    // Update user with badge (only if not already present)
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $addToSet: { badges: badgeName }, // $addToSet prevents duplicates
-      },
-      { new: true }
-    );
-
-    if (!user) {
+    // Get current user
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
       throw new Error(`User not found: ${userId}`);
+    }
+
+    // Add badge only if not already present (prevent duplicates)
+    const currentBadges = currentUser.badges || [];
+    let user: typeof currentUser;
+    if (!currentBadges.includes(badgeName)) {
+      const updatedBadges = [...currentBadges, badgeName];
+      user = await User.update(userId, { badges: updatedBadges });
+    } else {
+      // Badge already exists, return current user
+      user = currentUser;
     }
 
     console.log(`✅ Badge awarded: ${badgeName} to user ${userId}`);

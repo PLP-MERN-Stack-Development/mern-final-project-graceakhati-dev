@@ -6,7 +6,6 @@ import { scoreSubmission } from '../services/verificationService';
 import { dispatchEvent } from '../worker/badgeWorker';
 import Submission from '../models/Submission';
 import Assignment from '../models/Assignment';
-import { Types } from 'mongoose';
 import { IUser } from '../models/User';
 
 /**
@@ -56,7 +55,7 @@ export const submitAssignment = async (req: UploadRequest, res: Response): Promi
     // Check if user already submitted
     const existingSubmission = await Submission.findOne({
       assignmentId,
-      userId: req.user._id,
+      userId: req.user.id,
     });
 
     if (existingSubmission) {
@@ -101,7 +100,7 @@ export const submitAssignment = async (req: UploadRequest, res: Response): Promi
     const submission = new Submission({
       assignmentId,
       courseId,
-      userId: req.user._id,
+      userId: req.user.id,
       files: fileUrls,
       metadata: parsedMetadata,
       status: 'submitted',
@@ -116,10 +115,10 @@ export const submitAssignment = async (req: UploadRequest, res: Response): Promi
     await submission.populate('courseId', 'title slug');
 
     // Dispatch project_verified event if verified (aiScore > 60)
-    if (verified && req.user._id) {
+    if (verified && req.user.id) {
       try {
         await dispatchEvent('project_verified', {
-          userId: req.user._id.toString(),
+          userId: req.user.id,
           submissionId: submission._id.toString(),
           courseId: courseId,
           aiScore,
@@ -267,15 +266,15 @@ export const getSubmissionById = async (req: AuthRequest, res: Response): Promis
 
     // Students can only view their own submissions
     // Instructors/admins can view all
-    const userId = req.user._id.toString();
-    // Handle populated userId (could be ObjectId or populated User object)
+    const userId = req.user.id;
+    // Handle populated userId (could be string ID or populated User object)
     let submissionUserId: string;
-    if (submission.userId instanceof Types.ObjectId) {
-      submissionUserId = submission.userId.toString();
-    } else if (typeof submission.userId === 'object' && submission.userId !== null && '_id' in submission.userId) {
-      // Populated User object
+    if (typeof submission.userId === 'string') {
+      submissionUserId = submission.userId;
+    } else if (typeof submission.userId === 'object' && submission.userId !== null && ('id' in submission.userId || '_id' in submission.userId)) {
+      // Populated User object (Firestore uses 'id', MongoDB uses '_id')
       const populatedUser = submission.userId as unknown as IUser;
-      submissionUserId = populatedUser._id.toString();
+      submissionUserId = populatedUser.id || (populatedUser as any)._id?.toString() || '';
     } else {
       // Fallback: try toString() directly
       submissionUserId = String(submission.userId);

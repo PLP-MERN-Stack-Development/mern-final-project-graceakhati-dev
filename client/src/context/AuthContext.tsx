@@ -270,42 +270,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   /**
-   * Login with Google
-   * 
-   * Redirects to backend Google OAuth endpoint.
-   * The backend handles the OAuth flow and redirects back to frontend with token.
-   * Token handling is done by handleGoogleOAuthCallback() utility function.
+   * Login with Google - Disabled (using Firestore auth)
    */
   const loginWithGoogle = async (): Promise<void> => {
-    try {
-      // Get backend API URL from environment
-      const apiUrl = import.meta.env.VITE_API_URL;
-      
-      if (!apiUrl) {
-        throw new Error('VITE_API_URL is not configured');
-      }
-      
-      // Remove trailing slash if present
-      const cleanApiUrl = apiUrl.replace(/\/$/, '');
-      const googleAuthUrl = `${cleanApiUrl}/auth/google`;
-      
-      // Redirect to backend Google OAuth endpoint
-      // Backend will handle OAuth flow and redirect back to frontend with token
-      window.location.href = googleAuthUrl;
-    } catch (error: any) {
-      // Re-throw error for component handling
-      throw new Error(error.message || 'Google login failed. Please try again.');
-    }
+    throw new Error('Google OAuth is not available. Please use email/password authentication.');
   };
 
   /**
-   * Signup with Google
-   * 
-   * Simulates Google OAuth signup - replace with real OAuth flow.
+   * Signup with Google - Disabled (using Firestore auth)
    */
   const signupWithGoogle = async (): Promise<void> => {
-    // For now, same as loginWithGoogle - backend should handle new vs existing users
-    await loginWithGoogle();
+    throw new Error('Google OAuth is not available. Please use email/password authentication.');
   };
 
   /**

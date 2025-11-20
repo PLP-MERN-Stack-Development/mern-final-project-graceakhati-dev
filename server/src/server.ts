@@ -1,5 +1,5 @@
 import app from './app';
-import { connectDB } from './config/db';
+import { initializeFirestore } from './config/firestore';
 
 /**
  * Server Configuration
@@ -22,9 +22,9 @@ const startServer = async (): Promise<void> => {
     console.log(`🌐 Node Version: ${process.version}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    // Connect to MongoDB
-    console.log('📡 Connecting to MongoDB...');
-    await connectDB();
+    // Connect to Firestore
+    console.log('📡 Connecting to Firestore...');
+    await initializeFirestore();
 
     // Redis is optional - only initialize if explicitly enabled
     const enableRedis = process.env.ENABLE_REDIS === 'true';

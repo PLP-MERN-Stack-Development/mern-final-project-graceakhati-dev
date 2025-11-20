@@ -66,7 +66,7 @@ export const generateCertificate = async (
     }
 
     // Check authorization: user can only generate for themselves unless admin/instructor
-    const requestingUserId = req.user._id.toString();
+    const requestingUserId = req.user.id;
     const isAdminOrInstructor = ['admin', 'instructor'].includes(req.user.role);
 
     if (userId !== requestingUserId && !isAdminOrInstructor) {

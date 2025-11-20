@@ -1,29 +1,45 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import axios, { AxiosError } from 'axios';
 import { validationResult } from 'express-validator';
+import { getAuth } from 'firebase-admin/auth';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 
-/**
- * Generate JWT Token
- * @param userId - User ID
- * @param email - User email
- * @param role - User role
- * @returns JWT token string
- */
-const generateToken = (userId: string, email: string, role: string): string => {
-  const jwtSecret = process.env.JWT_SECRET;
-  const jwtExpire = process.env.JWT_EXPIRE || '7d';
+interface FirebaseSignInResponse {
+  idToken: string;
+  email: string;
+  refreshToken: string;
+  expiresIn: string;
+  localId: string;
+  registered?: boolean;
+}
 
-  if (!jwtSecret) {
-    throw new Error('JWT_SECRET is not defined in environment variables');
+const signInWithFirebasePassword = async (email: string, password: string): Promise<FirebaseSignInResponse> => {
+  const apiKey = process.env.FIREBASE_WEB_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('FIREBASE_WEB_API_KEY is not defined in environment variables');
   }
 
-  return jwt.sign(
-    { userId, email, role },
-    jwtSecret,
-    { expiresIn: jwtExpire } as jwt.SignOptions
-  );
+  try {
+    const response = await axios.post<FirebaseSignInResponse>(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      {
+        email,
+        password,
+        returnSecureToken: true,
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    const axiosError = error as AxiosError<{ error?: { message?: string } }>;
+    const message =
+      axiosError.response?.data?.error?.message ||
+      axiosError.message ||
+      'Firebase sign-in failed';
+    throw new Error(message);
+  }
 };
 
 /**
@@ -44,43 +60,58 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { name, email, password, role } = req.body;
+    const normalizedEmail = email.toLowerCase();
+    const auth = getAuth();
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    // Ensure Firebase user does not already exist
+    try {
+      await auth.getUserByEmail(normalizedEmail);
       res.status(400).json({
         success: false,
         message: 'User with this email already exists',
       });
       return;
+    } catch (firebaseError: any) {
+      if (firebaseError.code !== 'auth/user-not-found') {
+        throw firebaseError;
+      }
     }
 
-    // Create new user
-    const user = new User({
+    // Create Firebase Auth user
+    const firebaseUser = await auth.createUser({
+      email: normalizedEmail,
+      password,
+      displayName: name,
+    });
+
+    // Create Firestore profile
+    const user = await User.create({
+      firebaseUid: firebaseUser.uid,
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password,
       role: role || 'student',
     });
 
-    await user.save();
-
-    // Generate token
-    const token = generateToken(user._id.toString(), user.email, user.role);
+    // Sign in to retrieve ID token
+    const firebaseTokens = await signInWithFirebasePassword(normalizedEmail, password);
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
         user: {
-          id: user._id,
+          id: user.id,
+          firebaseUid: firebaseUser.uid,
           name: user.name,
           email: user.email,
           role: user.role,
           xp: user.xp,
           badges: user.badges,
         },
-        token,
+        token: firebaseTokens.idToken,
+        refreshToken: firebaseTokens.refreshToken,
+        expiresIn: firebaseTokens.expiresIn,
       },
     });
   } catch (error) {
@@ -111,45 +142,54 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase();
+    let firebaseSignIn: FirebaseSignInResponse;
 
-    // Find user and include password for comparison
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    try {
+      firebaseSignIn = await signInWithFirebasePassword(normalizedEmail, password);
+    } catch (firebaseError) {
+      console.error('Firebase login error:', firebaseError);
+      res.status(401).json({
+        success: false,
+        message: 'Invalid email or password',
+      });
+      return;
+    }
+
+    const auth = getAuth();
+    const firebaseUid = firebaseSignIn.localId;
+
+    // Ensure Firestore profile exists
+    let user =
+      (firebaseUid && (await User.findByFirebaseUid(firebaseUid))) ||
+      (await User.findByEmail(normalizedEmail));
 
     if (!user) {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
+      const firebaseUser = await auth.getUser(firebaseUid);
+      user = await User.create({
+        firebaseUid: firebaseUid,
+        name: firebaseUser.displayName || firebaseUser.email || normalizedEmail,
+        email: firebaseUser.email || normalizedEmail,
+        role: 'student',
       });
-      return;
     }
-
-    // Compare passwords
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
-      return;
-    }
-
-    // Generate token
-    const token = generateToken(user._id.toString(), user.email, user.role);
 
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          id: user._id,
+          id: user.id,
+          firebaseUid,
           name: user.name,
           email: user.email,
           role: user.role,
           xp: user.xp,
           badges: user.badges,
         },
-        token,
+        token: firebaseSignIn.idToken,
+        refreshToken: firebaseSignIn.refreshToken,
+        expiresIn: firebaseSignIn.expiresIn,
       },
     });
   } catch (error) {
@@ -183,7 +223,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
       success: true,
       data: {
         user: {
-          id: authReq.user._id.toString(),
+          id: authReq.user.id,
           name: authReq.user.name,
           email: authReq.user.email,
           role: authReq.user.role,
@@ -205,40 +245,4 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
   }
 };
 
-/**
- * Initiate Google OAuth flow
- * GET /api/auth/google
- * Redirects user to Google OAuth consent screen
- */
-export const googleAuthController = (_req: Request, res: Response): void => {
-  try {
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-    const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
-
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_REDIRECT_URI) {
-      res.status(500).json({
-        success: false,
-        message: 'Google OAuth configuration missing',
-      });
-      return;
-    }
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: GOOGLE_REDIRECT_URI,
-      response_type: 'code',
-      scope: 'openid email profile',
-      access_type: 'offline',
-      prompt: 'consent',
-    })}`;
-
-    res.redirect(authUrl);
-  } catch (error) {
-    console.error('Error redirecting to Google OAuth:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to redirect to Google OAuth',
-    });
-  }
-};
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ImageLoader from '@/components/ImageLoader';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   dashboardAvatars,
   dashboardBadges,
@@ -7,17 +8,47 @@ import {
 } from '@/utils/imagePaths';
 
 function ProfilePage() {
+  const { user, isAuthenticated } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState<string>(
     dashboardAvatars.female
   );
   const [userInfo, setUserInfo] = useState({
-    name: 'Grace Akhati',
-    email: 'grace.akhati@example.com',
-    location: 'Nairobi, Kenya',
+    name: '',
+    email: '',
+    location: '',
     bio: 'Passionate about climate action and environmental sustainability. Learning and making a difference, one step at a time!',
-    joinDate: 'January 2024',
+    joinDate: '',
   });
+
+  // Update user info when user data changes
+  useEffect(() => {
+    if (user) {
+      setUserInfo(prev => ({
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        location: prev.location || '', // Keep location if already set
+        bio: prev.bio || 'Passionate about climate action and environmental sustainability. Learning and making a difference, one step at a time!',
+        joinDate: prev.joinDate || formatJoinDate(new Date()), // Default to current date if not available
+      }));
+    }
+  }, [user]);
+
+  // Show loading or redirect if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="container mx-auto px-4 py-8 animate-fade-in">
+        <div className="bg-white rounded-2xl border-2 border-green-100 shadow-lg p-6 md:p-8 text-center">
+          <p className="text-gray-600 text-lg">Please log in to view your profile.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Format date to "Month Year" format
+  const formatJoinDate = (date: Date): string => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
 
   const handleAvatarChange = () => {
     // Cycle through avatars or open avatar selector
@@ -76,16 +107,21 @@ function ProfilePage() {
           {/* Name and Info */}
           <div className="flex-1 text-center md:text-left">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-              {userInfo.name}
+              {user?.name || userInfo.name || 'User'}
             </h1>
-            <p className="text-gray-600 text-lg mb-4">{userInfo.email}</p>
+            <p className="text-gray-600 text-lg mb-4">{user?.email || userInfo.email || 'No email'}</p>
             <div className="flex flex-wrap gap-3 justify-center md:justify-start">
               <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
                 📍 {userInfo.location}
               </span>
               <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-                📅 Joined {userInfo.joinDate}
+                📅 Joined {userInfo.joinDate || formatJoinDate(new Date())}
               </span>
+              {user?.xp !== undefined && (
+                <span className="px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
+                  ⭐ {user.xp} XP
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -137,14 +173,16 @@ function ProfilePage() {
                   {isEditing ? (
                     <input
                       type="email"
-                      value={userInfo.email}
+                      value={user?.email || userInfo.email}
                       onChange={(e) =>
                         setUserInfo({ ...userInfo, email: e.target.value })
                       }
                       className="w-full px-4 py-3 border-2 border-green-200 rounded-lg focus:outline-none focus:border-green-500 transition-all"
+                      disabled
+                      title="Email cannot be changed"
                     />
                   ) : (
-                    <p className="text-gray-700">{userInfo.email}</p>
+                    <p className="text-gray-700">{user?.email || userInfo.email || 'No email'}</p>
                   )}
                 </div>
 
@@ -227,26 +265,36 @@ function ProfilePage() {
               Badges Earned
             </h2>
             <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {badges.map((badge, index) => (
-                <div
-                  key={index}
-                  className="group flex flex-col items-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-100 hover:border-green-300 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-                >
-                  <ImageLoader
-                    src={badge.src}
-                    alt={badge.alt}
-                    className="w-16 h-16 md:w-20 md:h-20 group-hover:scale-110 transition-transform duration-300"
-                    lazy={false}
-                  />
-                  <span className="mt-2 text-xs font-semibold text-gray-700 text-center">
-                    {badge.name}
-                  </span>
+              {user?.badges && user.badges.length > 0 ? (
+                user.badges.map((badgeName, index) => {
+                  // Find matching badge or use default
+                  const badge = badges.find(b => b.name.toLowerCase() === badgeName.toLowerCase()) || badges[0];
+                  return (
+                    <div
+                      key={index}
+                      className="group flex flex-col items-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-100 hover:border-green-300 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                      <ImageLoader
+                        src={badge.src}
+                        alt={badge.alt}
+                        className="w-16 h-16 md:w-20 md:h-20 group-hover:scale-110 transition-transform duration-300"
+                        lazy={false}
+                      />
+                      <span className="mt-2 text-xs font-semibold text-gray-700 text-center">
+                        {badge.name}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-full text-center py-8">
+                  <p className="text-gray-500 text-sm">No badges earned yet. Complete courses to earn badges!</p>
                 </div>
-              ))}
+              )}
             </div>
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 font-semibold">
-                {badges.length} Badges Earned
+                {user?.badges?.length || 0} Badges Earned
               </p>
             </div>
           </div>

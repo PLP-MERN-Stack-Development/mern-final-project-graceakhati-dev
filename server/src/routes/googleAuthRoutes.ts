@@ -294,12 +294,10 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    let user: IUser | null = await User.findOne({
-      $or: [{ email: userEmail.toLowerCase() }, { googleId: userId }],
-    });
+    let user = await User.findByEmailOrGoogleId(userEmail.toLowerCase(), userId);
 
     if (!user) {
-      user = new User({
+      user = await User.create({
         name: userName,
         email: userEmail.toLowerCase(),
         googleId: userId,
@@ -308,13 +306,13 @@ router.get('/callback', async (req: Request, res: Response): Promise<void> => {
         xp: 0,
         badges: [],
       });
-      await user.save();
     } else if (!user.googleId) {
-      user.googleId = userId;
-      await user.save();
+      await User.update(user.id, { googleId: userId });
+      user = await User.findById(user.id);
+      if (!user) throw new Error('Failed to update user');
     }
 
-    const token: string = generateToken(user._id.toString(), user.email, user.role);
+    const token: string = generateToken(user.id, user.email, user.role);
 
     res.redirect(`${FRONTEND_URL}/auth/success?token=${encodeURIComponent(token)}`);
   } catch (error) {

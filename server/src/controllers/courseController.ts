@@ -191,7 +191,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
       title,
       slug: courseSlug,
       description,
-      authorId: req.user._id,
+      authorId: req.user.id,
       modules: modules || [],
       tags: tags || [],
       price: price || 0,
@@ -262,7 +262,7 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Check authorization: author, instructor, or admin
-    const userId = req.user._id.toString();
+    const userId = req.user.id;
     const isAuthor = course.authorId.toString() === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 
@@ -327,7 +327,7 @@ export const deleteCourse = async (req: AuthRequest, res: Response): Promise<voi
     }
 
     // Check authorization: author, instructor, or admin
-    const userId = req.user._id.toString();
+    const userId = req.user.id;
     const isAuthor = course.authorId.toString() === userId;
     const isInstructorOrAdmin = ['instructor', 'admin'].includes(req.user.role);
 

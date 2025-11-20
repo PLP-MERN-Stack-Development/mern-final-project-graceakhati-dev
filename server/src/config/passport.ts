@@ -57,19 +57,18 @@ if (hasGoogleCredentials) {
           }
 
           // Find user by email or googleId
-          let user = await User.findOne({
-            $or: [{ email: email.toLowerCase() }, { googleId }],
-          });
+          let user = await User.findByEmailOrGoogleId(email.toLowerCase(), googleId);
 
           if (user) {
             // Update googleId if not set
             if (!user.googleId) {
-              user.googleId = googleId;
-              await user.save();
+              await User.update(user.id, { googleId });
+              user = await User.findById(user.id);
+              if (!user) throw new Error('Failed to update user');
             }
           } else {
             // Create new user
-            user = new User({
+            user = await User.create({
               name: displayName || email.split('@')[0],
               email: email.toLowerCase(),
               password: '', // Google users don't need password
@@ -78,7 +77,6 @@ if (hasGoogleCredentials) {
               xp: 0,
               badges: [],
             });
-            await user.save();
           }
 
           return done(null, user);
@@ -94,20 +92,15 @@ if (hasGoogleCredentials) {
     console.warn('⚠️  Google OAuth will be disabled.');
   }
 } else {
-  // Log warning but don't crash - Google OAuth is optional
-  console.warn('⚠️  Google OAuth credentials not found. Google login will be disabled.');
-  console.warn('💡 To enable Google OAuth, set the following environment variables:');
-  console.warn('   - GOOGLE_CLIENT_ID');
-  console.warn('   - GOOGLE_CLIENT_SECRET');
-  console.warn('   - GOOGLE_REDIRECT_URI');
-  console.warn('💡 Make sure these are set in your .env file or environment variables.');
+  // Google OAuth is disabled - silently skip initialization
+  // No warning needed since we're using Firestore authentication only
 }
 
 /**
  * Serialize user for session (not used with JWT, but required by Passport)
  */
 passport.serializeUser((user: any, done: (err: any, id?: any) => void) => {
-  done(null, user._id);
+  done(null, user.id || user._id);
 });
 
 /**

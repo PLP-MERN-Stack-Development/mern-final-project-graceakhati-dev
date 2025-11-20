@@ -34,7 +34,7 @@ export const addUserXp = async (req: AuthRequest, res: Response): Promise<void> 
     };
 
     // Use authenticated user's ID if userId not provided
-    const targetUserId = userId || req.user._id.toString();
+    const targetUserId = userId || req.user.id;
 
     // Validate XP value
     if (typeof xp !== 'number' || isNaN(xp)) {
@@ -46,7 +46,7 @@ export const addUserXp = async (req: AuthRequest, res: Response): Promise<void> 
     }
 
     // Only allow users to add XP to themselves, unless admin/instructor
-    if (targetUserId !== req.user._id.toString() && !['admin', 'instructor'].includes(req.user.role)) {
+    if (targetUserId !== req.user.id && !['admin', 'instructor'].includes(req.user.role)) {
       res.status(403).json({
         success: false,
         message: 'You can only add XP to your own account',
@@ -126,7 +126,7 @@ export const getUserLeaderboardRank = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    const requestingUserId = req.user._id.toString();
+    const requestingUserId = req.user.id;
 
     // Users can only view their own rank unless admin/instructor
     if (userId !== requestingUserId && !['admin', 'instructor'].includes(req.user.role)) {

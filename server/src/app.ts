@@ -3,8 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import passport from './config/passport';
 import authRoutes from './routes/authRoutes';
-import googleAuthRoutes from './routes/googleAuthRoutes';
-import { googleAuthController } from './controllers/authController';
 import courseRoutes from './routes/courseRoutes';
 import lessonRoutes from './routes/lessonRoutes';
 import moduleRoutes from './routes/moduleRoutes';
@@ -97,14 +95,8 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // API Routes
-// Direct route for /auth/google - must be before router mounts to ensure it works
-app.get('/auth/google', (req: Request, res: Response) => {
-  console.log('Route /auth/google hit');
-  return googleAuthController(req, res);
-});
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
-app.use('/api/auth/google', googleAuthRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/lessons', lessonRoutes);
