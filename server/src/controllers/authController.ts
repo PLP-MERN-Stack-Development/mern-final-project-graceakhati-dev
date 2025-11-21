@@ -158,17 +158,39 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     try {
       firebaseSignIn = await signInWithFirebasePassword(normalizedEmail, password);
+      console.log('Firebase sign-in successful for:', normalizedEmail);
     } catch (firebaseError) {
       const errorMessage = firebaseError instanceof Error ? firebaseError.message : 'Unknown error';
-      console.error('Firebase login error:', errorMessage);
+      const axiosError = firebaseError as AxiosError<{ error?: { message?: string; code?: string } }>;
       
-      // Provide more specific error messages
-      if (errorMessage.includes('INVALID_PASSWORD') || errorMessage.includes('EMAIL_NOT_FOUND')) {
+      // Extract Firebase error code and message if available
+      const firebaseErrorCode = axiosError.response?.data?.error?.code;
+      const firebaseErrorMessage = axiosError.response?.data?.error?.message || errorMessage;
+      
+      console.error('Firebase login error:', {
+        code: firebaseErrorCode,
+        message: firebaseErrorMessage,
+        email: normalizedEmail,
+      });
+      
+      // Provide more specific error messages based on Firebase error codes
+      if (firebaseErrorCode === 'INVALID_PASSWORD' || firebaseErrorCode === 'EMAIL_NOT_FOUND' || 
+          firebaseErrorMessage.includes('INVALID_PASSWORD') || firebaseErrorMessage.includes('EMAIL_NOT_FOUND')) {
         res.status(401).json({
           success: false,
           message: 'Invalid email or password',
         });
-      } else if (errorMessage.includes('API key')) {
+      } else if (firebaseErrorCode === 'INVALID_EMAIL' || firebaseErrorMessage.includes('INVALID_EMAIL')) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid email format',
+        });
+      } else if (firebaseErrorCode === 'USER_DISABLED' || firebaseErrorMessage.includes('USER_DISABLED')) {
+        res.status(403).json({
+          success: false,
+          message: 'This account has been disabled. Please contact support.',
+        });
+      } else if (firebaseErrorMessage.includes('API key') || firebaseErrorCode === 'API_KEY_NOT_VALID') {
         res.status(500).json({
           success: false,
           message: 'Authentication service configuration error. Please contact support.',
@@ -176,8 +198,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       } else {
         res.status(401).json({
           success: false,
-          message: 'Login failed. Please try again.',
-          error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+          message: 'Login failed. Please check your credentials and try again.',
+          error: process.env.NODE_ENV === 'development' ? firebaseErrorMessage : undefined,
         });
       }
       return;
