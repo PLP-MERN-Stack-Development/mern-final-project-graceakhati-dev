@@ -101,24 +101,58 @@ function LoginPage() {
   // Check if user is already authenticated (persist login on refresh)
   // FIX: Extract OAuth token from URL query parameter
   useEffect(() => {
-    const checkAuthState = () => {
+    const checkAuthState = async () => {
       try {
         // FIX: Check for OAuth token in URL (from Google OAuth redirect)
         const tokenFromUrl = searchParams.get('token');
         if (tokenFromUrl) {
-          // Store token in localStorage
-          const authData = {
-            token: tokenFromUrl,
-            isAuthenticated: true,
-            // We'll fetch user details after redirect
-          };
-          localStorage.setItem('planet-path-auth-storage', JSON.stringify(authData));
+          // Store token temporarily in auth store so getCurrentUser can use it
+          const authStore = useAuthStore.getState();
+          if (authStore && typeof authStore.setToken === 'function') {
+            authStore.setToken(tokenFromUrl);
+          }
           
-          // Remove token from URL for security
-          window.history.replaceState({}, document.title, window.location.pathname);
-          
-          // Redirect to dashboard (will fetch user info via /auth/me)
-          navigate('/student/dashboard', { replace: true });
+          // Fetch user info using the token
+          try {
+            const user = await authService.getCurrentUser();
+            
+            // Store auth data
+            saveAuthToStorage(user, tokenFromUrl);
+            
+            // Update Zustand store with full user info
+            if (authStore && typeof authStore.loginWithUser === 'function') {
+              authStore.loginWithUser(
+                {
+                  id: user._id || user.id || '',
+                  name: user.name,
+                  email: user.email || '',
+                  role: user.role as 'student' | 'instructor' | 'admin',
+                  googleId: (user as any).googleId,
+                  xp: (user as any).xp,
+                  badges: (user as any).badges,
+                },
+                tokenFromUrl
+              );
+            }
+            
+            // Remove token from URL for security
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Redirect to appropriate dashboard based on user role
+            redirectByRole(user.role);
+          } catch (error) {
+            console.error('Failed to fetch user info with OAuth token:', error);
+            // Remove token from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Clear token from store
+            if (authStore && typeof authStore.logout === 'function') {
+              authStore.logout();
+            }
+            // Show error and stay on login page
+            setErrors({
+              general: 'Failed to complete Google sign-in. Please try again.',
+            });
+          }
           return;
         }
         
