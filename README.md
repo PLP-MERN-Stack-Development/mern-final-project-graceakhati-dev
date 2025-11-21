@@ -943,7 +943,7 @@ npx playwright test tests/e2e/auth-flow.spec.ts
 
 ### Deployment Links
 
-- **Frontend**: https://planet-path-backend.onrender.com/
+- **Frontend**: https://the-planet-path.netlify.app/
 - **Backend API**: https://planet-path-backend.onrender.com/
 - **API Documentation**: See `server/docs/API_DOCUMENTATION.md`
 - **Project oresentation**: https://www.canva.com/design/DAG46vhw0rA/qxY9srYk8bB2q3jLfOYgQQ/edit?utm_content=DAG46vhw0rA&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
