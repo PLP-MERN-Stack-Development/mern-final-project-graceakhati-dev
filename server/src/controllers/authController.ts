@@ -145,14 +145,40 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const normalizedEmail = email.toLowerCase();
     let firebaseSignIn: FirebaseSignInResponse;
 
+    // Check if Firebase Web API Key is configured
+    if (!process.env.FIREBASE_WEB_API_KEY) {
+      console.error('FIREBASE_WEB_API_KEY is not configured');
+      res.status(500).json({
+        success: false,
+        message: 'Authentication service is not properly configured. Please contact support.',
+      });
+      return;
+    }
+
     try {
       firebaseSignIn = await signInWithFirebasePassword(normalizedEmail, password);
     } catch (firebaseError) {
-      console.error('Firebase login error:', firebaseError);
-      res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
+      const errorMessage = firebaseError instanceof Error ? firebaseError.message : 'Unknown error';
+      console.error('Firebase login error:', errorMessage);
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('INVALID_PASSWORD') || errorMessage.includes('EMAIL_NOT_FOUND')) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid email or password',
+        });
+      } else if (errorMessage.includes('API key')) {
+        res.status(500).json({
+          success: false,
+          message: 'Authentication service configuration error. Please contact support.',
+        });
+      } else {
+        res.status(401).json({
+          success: false,
+          message: 'Login failed. Please try again.',
+          error: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+        });
+      }
       return;
     }
 
