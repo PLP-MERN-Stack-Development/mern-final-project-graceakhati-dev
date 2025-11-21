@@ -36,29 +36,39 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3001', // Frontend dev server
   'http://localhost:3000', // Alternative frontend port
-  // Add your production frontend URL here:
-  // 'https://your-frontend-domain.com',
+  'https://the-planet-path.netlify.app', // Production frontend
+  'https://the-planet-path.netlify.app/', // With trailing slash
 ].filter(Boolean) as string[]; // Remove undefined values and type as string array
+
+// Normalize origins (remove trailing slashes for comparison)
+const normalizeOrigin = (origin: string): string => {
+  return origin.replace(/\/$/, '');
+};
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Normalize the origin for comparison
+    const normalizedOrigin = normalizeOrigin(origin);
+    const normalizedAllowed = allowedOrigins.map(normalizeOrigin);
+    
     // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
+    if (normalizedAllowed.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
-      // Log blocked origin for debugging (only in development)
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(`CORS blocked origin: ${origin}`);
-      }
+      // Log blocked origin for debugging
+      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      console.warn(`   Allowed origins: ${normalizedAllowed.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true, // needed if using cookies/auth tokens
   optionsSuccessStatus: 200,
+  preflightContinue: false,
 };
 
 app.use(cors(corsOptions));
