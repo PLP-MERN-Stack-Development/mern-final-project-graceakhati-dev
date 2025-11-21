@@ -189,7 +189,10 @@ userSchema.statics.update = async function (
 };
 
 // Define the interface for the User model with static methods
+// Model<IUser> already includes all standard Mongoose methods (findOne, find, create, deleteMany, countDocuments, etc.)
+// We only need to add our custom static methods
 interface IUserModel extends Model<IUser> {
+  // Custom static methods
   findByEmail(email: string, includePassword?: boolean): Promise<IUser | null>;
   findByFirebaseUid(uid: string): Promise<IUser | null>;
   findByGoogleId(googleId: string): Promise<IUser | null>;
