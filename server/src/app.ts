@@ -12,6 +12,7 @@ import submissionRoutes from './routes/submissionRoutes';
 import enrollmentRoutes from './routes/enrollmentRoutes';
 import leaderboardRoutes from './routes/leaderboardRoutes';
 import certificateRoutes from './routes/certificateRoutes';
+import { googleAuth, googleAuthCallback } from './controllers/googleAuthController';
 
 // Load environment variables
 dotenv.config();
@@ -107,6 +108,11 @@ app.get('/health', (_req: Request, res: Response) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
+
+// Google OAuth routes (using Passport strategy)
+app.get('/api/auth/google', googleAuth);
+app.get('/api/auth/google/callback', googleAuthCallback);
+
 app.use('/api/courses', courseRoutes);
 app.use('/api/modules', moduleRoutes);
 app.use('/api/lessons', lessonRoutes);
