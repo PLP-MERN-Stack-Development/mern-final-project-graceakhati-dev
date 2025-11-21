@@ -7,11 +7,12 @@ import { AuthRequest } from '../middleware/auth';
 
 interface FirebaseSignInResponse {
   idToken: string;
-  email: string;
+  email?: string;
   refreshToken: string;
   expiresIn: string;
   localId: string;
   registered?: boolean;
+  displayName?: string;
 }
 
 const signInWithFirebasePassword = async (email: string, password: string): Promise<FirebaseSignInResponse> => {
@@ -182,20 +183,29 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const auth = getAuth();
     const firebaseUid = firebaseSignIn.localId;
 
-    // Ensure Firestore profile exists
+    // Ensure MongoDB user profile exists
     let user =
       (firebaseUid && (await User.findByFirebaseUid(firebaseUid))) ||
       (await User.findByEmail(normalizedEmail));
 
     if (!user) {
-      const firebaseUser = await auth.getUser(firebaseUid);
+      // Try to get user info from Firebase Admin if available
+      let firebaseUser: any = null;
+      try {
+        const auth = getAuth();
+        firebaseUser = await auth.getUser(firebaseUid);
+      } catch (firebaseAdminError) {
+        // Firebase Admin not initialized - use email from sign-in response
+        console.warn('Firebase Admin not available, creating user with email only:', (firebaseAdminError as Error).message);
+      }
+
+      // Create user in MongoDB
       user = await User.create({
         firebaseUid: firebaseUid,
-        name: firebaseUser.displayName || firebaseUser.email || normalizedEmail,
-        email: firebaseUser.email || normalizedEmail,
+        name: firebaseUser?.displayName || firebaseSignIn.email?.split('@')[0] || normalizedEmail.split('@')[0] || 'User',
+        email: firebaseUser?.email || firebaseSignIn.email || normalizedEmail,
         role: 'student',
       });
     }
