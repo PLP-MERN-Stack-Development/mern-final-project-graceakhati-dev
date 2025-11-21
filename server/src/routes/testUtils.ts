@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import User from '../models/User';
-import bcrypt from 'bcryptjs';
 
 const router = Router();
 
@@ -49,11 +48,8 @@ router.post('/create-user', async (req: Request, res: Response): Promise<void> =
 
     if (user) {
       // User exists - update password and role if needed
-      // Hash the password
-      const salt = await bcrypt.genSalt(12);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      user.password = hashedPassword;
+      // Password will be hashed automatically by the pre-save hook
+      user.password = password; // Will be hashed by pre-save hook
       user.role = role as 'student' | 'instructor' | 'admin';
       await user.save();
 
@@ -69,14 +65,11 @@ router.post('/create-user', async (req: Request, res: Response): Promise<void> =
     }
 
     // Create new user
-    // Hash password manually since we're bypassing the pre-save hook
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
+    // Note: Password will be hashed automatically by the pre-save hook
     user = new User({
       name: email.split('@')[0] || 'Test User', // Extract name from email
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password: password, // Will be hashed by pre-save hook
       role: role as 'student' | 'instructor' | 'admin',
       xp: 0,
       badges: [],

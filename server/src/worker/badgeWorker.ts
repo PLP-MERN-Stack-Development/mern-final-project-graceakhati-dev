@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { getRedisClient } from '../services/redis.service';
-import User from '../models/User';
+import User, { IUser } from '../models/User';
 
 /**
  * Event Types
@@ -224,6 +224,10 @@ export async function addXp(userId: string, xp: number): Promise<number> {
     const newXp = (currentUser.xp || 0) + xp;
     const user = await User.update(userId, { xp: newXp });
 
+    if (!user) {
+      throw new Error(`Failed to update user: ${userId}`);
+    }
+
     // Update Redis leaderboard (if Redis is available)
     try {
       const { addXp: addXpToLeaderboard } = await import('../services/redis.service');
@@ -266,10 +270,14 @@ export async function awardBadge(userId: string, badgeName: string): Promise<str
 
     // Add badge only if not already present (prevent duplicates)
     const currentBadges = currentUser.badges || [];
-    let user: typeof currentUser;
+    let user: IUser;
     if (!currentBadges.includes(badgeName)) {
       const updatedBadges = [...currentBadges, badgeName];
-      user = await User.update(userId, { badges: updatedBadges });
+      const updatedUser = await User.update(userId, { badges: updatedBadges });
+      if (!updatedUser) {
+        throw new Error(`Failed to update user: ${userId}`);
+      }
+      user = updatedUser;
     } else {
       // Badge already exists, return current user
       user = currentUser;

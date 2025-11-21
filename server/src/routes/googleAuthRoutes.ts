@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import User, { IUser } from '../models/User';
+import User from '../models/User';
 import jwt from 'jsonwebtoken';
 
 const router = Router();
