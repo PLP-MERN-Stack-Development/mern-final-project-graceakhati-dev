@@ -4,6 +4,7 @@ import authService from '@/services/authService';
 import { useAuthStore } from '@/store/useAuthStore';
 import ImageLoader from '@/components/ImageLoader';
 import { uiIllustrations } from '@/utils/imagePaths';
+import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 
 /**
  * Login Page Component
@@ -33,6 +34,7 @@ function LoginPage() {
   }>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   /**
    * Save auth data to localStorage
@@ -265,6 +267,18 @@ function LoginPage() {
     }
   };
 
+  /**
+   * Handle Google Sign-In
+   * Redirects to backend Google OAuth endpoint
+   */
+  const handleGoogleLogin = () => {
+    setIsGoogleLoading(true);
+    // Get the API base URL from environment or use default
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://planet-path-backend.onrender.com';
+    // Redirect to backend Google OAuth endpoint
+    window.location.href = `${apiUrl}/api/auth/google`;
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-br from-light-sand via-soft-white to-light-sand">
@@ -404,6 +418,24 @@ function LoginPage() {
                 )}
               </button>
             </form>
+
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-leaf-green/30"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-soft-white text-earth-brown font-medium">Or</span>
+              </div>
+            </div>
+
+            {/* Google Sign-In Button */}
+            <GoogleLoginButton
+              text="Continue with Google"
+              onClick={handleGoogleLogin}
+              isLoading={isGoogleLoading}
+              disabled={isSubmitting}
+            />
 
             {/* Sign Up Link */}
             <div className="mt-6 text-center">
