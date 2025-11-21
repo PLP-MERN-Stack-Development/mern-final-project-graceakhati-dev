@@ -943,9 +943,10 @@ npx playwright test tests/e2e/auth-flow.spec.ts
 
 ### Deployment Links
 
-- **Frontend**: [Deployed Frontend URL](https://your-frontend-url.vercel.app) *(Update with actual URL)*
-- **Backend API**: [Deployed Backend URL](https://your-backend-url.render.com) *(Update with actual URL)*
+- **Frontend**: https://planet-path-backend.onrender.com/
+- **Backend API**: https://planet-path-backend.onrender.com/
 - **API Documentation**: See `server/docs/API_DOCUMENTATION.md`
+- **Project oresentation**: https://www.canva.com/design/DAG46vhw0rA/qxY9srYk8bB2q3jLfOYgQQ/edit?utm_content=DAG46vhw0rA&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 ### Deployment Platforms
 
@@ -974,28 +975,7 @@ npx playwright test tests/e2e/auth-flow.spec.ts
    - Render will automatically deploy on push to main branch
    - Check deployment logs for any issues
 
-#### Frontend Deployment (Vercel)
-
-1. **Create Vercel Account**
-   - Sign up at https://vercel.com
-   - Connect your GitHub repository
-
-2. **Import Project**
-   - Select repository: `mern-final-project-graceakhati-dev`
-   - Root directory: `client`
-   - Framework preset: `Vite`
-   - Build command: `npm run build`
-   - Output directory: `dist`
-
-3. **Configure Environment Variables**
-   - Add `VITE_API_URL` pointing to backend URL
-   - Add `VITE_SOCKET_URL` if using Socket.io
-
-4. **Deploy**
-   - Vercel will automatically deploy on push to main branch
-   - Custom domain can be configured in settings
-
-#### Frontend Deployment (Netlify - Alternative)
+#### Frontend Deployment (Netlify)
 
 1. **Create Netlify Account**
    - Sign up at https://netlify.com
@@ -1074,58 +1054,8 @@ jobs:
 
 ---
 
-## 9. Demo Video
 
-### Demo Video Link
 
-**[Demo Video](https://your-video-url.com)** *(Update with actual video URL)*
-
-### Video Summary
-
-This 5-10 minute demo video covers:
-
-1. **Platform Overview** (1 min)
-   - Introduction to Planet Path
-   - Problem statement and solution
-   - Key features overview
-
-2. **User Registration & Authentication** (1 min)
-   - User signup process
-   - JWT authentication
-   - Google OAuth integration
-   - Role-based dashboard access
-
-3. **Course Catalog & Enrollment** (2 min)
-   - Browsing available courses
-   - Course details and modules
-   - Enrollment process
-   - Progress tracking
-
-4. **Course Player & Learning** (2 min)
-   - Module-based course structure
-   - Video lesson playback
-   - Quiz completion
-   - Progress updates
-
-5. **Impact Project Submission** (2 min)
-   - Assignment submission flow
-   - File upload (images, documents)
-   - Geolocation tagging
-   - Submission review and grading
-
-6. **Leaderboard & Certificates** (1 min)
-   - XP system and rankings
-   - Badge achievements
-   - Certificate generation
-   - Certificate verification
-
-7. **Admin & Instructor Features** (1 min)
-   - Course creation and management
-   - Submission grading
-   - User management
-   - Platform analytics
-
----
 
 ## 10. Screenshots
 
