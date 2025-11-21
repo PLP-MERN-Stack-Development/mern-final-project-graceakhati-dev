@@ -96,7 +96,7 @@ const userSchema = new Schema<IUser>(
 );
 
 // Create indexes
-userSchema.index({ email: 1 });
+// Note: email already has unique: true which creates an index, so we don't need to add it again
 userSchema.index({ firebaseUid: 1 });
 userSchema.index({ googleId: 1 });
 
