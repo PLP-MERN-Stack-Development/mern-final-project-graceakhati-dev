@@ -88,7 +88,7 @@ function NavBar({ currentPage: _currentPage }: NavBarProps) {
               alt="Planet Path Logo"
               className="w-8 h-8"
             />
-            <span className="hidden md:inline-block font-planet text-xl font-bold">
+            <span className="inline-block font-planet text-lg md:text-xl font-bold">
               Planet Path
             </span>
           </Link>
