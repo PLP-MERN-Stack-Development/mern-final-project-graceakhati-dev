@@ -56,25 +56,44 @@ export const googleAuth = (req: Request, res: Response) => {
 export const googleAuthCallback = (req: Request, res: Response) => {
   passport.authenticate('google', { session: false }, (err: Error | null, user: IUser | null, info: any) => {
     // Get frontend URL from environment variables
-    const FRONTEND_URL = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3001';
+    let FRONTEND_URL = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3001';
+    
+    // Normalize URL (remove trailing slash)
+    FRONTEND_URL = FRONTEND_URL.replace(/\/$/, '');
+    
+    // Ensure it's a valid URL
+    if (!FRONTEND_URL.startsWith('http://') && !FRONTEND_URL.startsWith('https://')) {
+      console.error('Invalid FRONTEND_URL:', FRONTEND_URL);
+      FRONTEND_URL = 'https://the-planet-path.netlify.app';
+    }
+
+    console.log('Google OAuth callback - Frontend URL:', FRONTEND_URL);
+    console.log('Google OAuth callback - User:', user ? { id: user.id, email: user.email } : 'null');
 
     if (err || !user) {
       const errorMessage = err?.message || info?.message || 'OAuth authentication failed';
       console.error('Google OAuth error:', errorMessage);
-      return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(errorMessage)}`);
+      const redirectUrl = `${FRONTEND_URL}/login?error=${encodeURIComponent(errorMessage)}`;
+      console.log('Redirecting to (error):', redirectUrl);
+      return res.redirect(redirectUrl);
     }
 
     try {
       // Generate JWT token
       const token = generateToken(user.id, user.email, user.role);
+      console.log('Generated JWT token for user:', user.email);
 
       // Redirect to login page with token - the Login page will handle storing the token
       // and redirecting to the appropriate dashboard based on user role
-      res.redirect(`${FRONTEND_URL}/login?token=${encodeURIComponent(token)}`);
+      const redirectUrl = `${FRONTEND_URL}/login?token=${encodeURIComponent(token)}`;
+      console.log('Redirecting to (success):', redirectUrl.replace(/token=[^&]+/, 'token=***'));
+      res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error generating token:', error);
       const errorMessage = error instanceof Error ? error.message : 'Token generation failed';
-      res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(errorMessage)}`);
+      const redirectUrl = `${FRONTEND_URL}/login?error=${encodeURIComponent(errorMessage)}`;
+      console.log('Redirecting to (token error):', redirectUrl);
+      res.redirect(redirectUrl);
     }
   })(req, res);
 };
