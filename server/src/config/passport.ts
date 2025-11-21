@@ -8,7 +8,16 @@ import User from '../models/User';
  */
 let GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID?.trim();
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET?.trim();
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim();
+let GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI?.trim();
+
+// Auto-construct redirect URI if not provided or if it points to frontend
+// The redirect URI MUST point to the backend, not the frontend
+if (!GOOGLE_REDIRECT_URI || GOOGLE_REDIRECT_URI.includes('netlify.app') || GOOGLE_REDIRECT_URI.includes('localhost:3001')) {
+  // Construct backend URL from environment or use default
+  const BACKEND_URL = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || 'https://planet-path-backend.onrender.com';
+  GOOGLE_REDIRECT_URI = `${BACKEND_URL}/api/auth/google/callback`;
+  console.log(`ℹ️  Auto-constructed GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}`);
+}
 
 // Fix common mistake: Remove http:// or https:// prefix from Client ID if present
 if (GOOGLE_CLIENT_ID) {
