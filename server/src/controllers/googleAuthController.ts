@@ -68,17 +68,9 @@ export const googleAuthCallback = (req: Request, res: Response) => {
       // Generate JWT token
       const token = generateToken(user.id, user.email, user.role);
 
-      // Get redirect URL from query params or use default
-      const redirectParam = req.query.redirect as string | undefined;
-      const defaultRedirect = redirectParam || `${FRONTEND_URL}/student/dashboard`;
-      
-      // Construct redirect URL (handle both relative and absolute paths)
-      const redirectUrl = defaultRedirect.startsWith('http') 
-        ? defaultRedirect 
-        : `${FRONTEND_URL}${defaultRedirect}`;
-
-      // Redirect back to frontend with token
-      res.redirect(`${redirectUrl}?token=${encodeURIComponent(token)}`);
+      // Redirect to login page with token - the Login page will handle storing the token
+      // and redirecting to the appropriate dashboard based on user role
+      res.redirect(`${FRONTEND_URL}/login?token=${encodeURIComponent(token)}`);
     } catch (error) {
       console.error('Error generating token:', error);
       const errorMessage = error instanceof Error ? error.message : 'Token generation failed';
