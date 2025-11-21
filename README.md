@@ -1060,27 +1060,27 @@ jobs:
 ## 10. Screenshots
 
 ### Landing Page
-![Landing Page](screenshots/landing-page.png)
+![Landing Page](./client/public/screenshots/landing-page.png)
 *Welcome page with course highlights and call-to-action*
 
 ### Landing Page
-![Landing Page](screenshots/student-profile.png)
+![Landing Page](./client/public/screenshots/student-profile.png)
 *Profile page with student information*
 
 ### Course Catalog
-![Course Catalog](screenshots/course-catalog.png)
+![Course Catalog](./client/public/screenshots/course-catalog.png)
 *Browse available courses with filtering options*
 
 ### Certification Page
-![Certification](screenshots/certification.png)
+![Certification](./client/public/screenshots/certification.png)
 *Generated certificate with verification ID*
 
 ### Student Dashboard
-![Student Dashboard](screenshots/student-dashboard.png)
+![Student Dashboard](./client/public/screenshots/student-dashboard.png)
 *Student dashboard with enrolled courses and progress*
 
 ### Student Achievements
-![Instructor Dashboard](screenshots/student-achievements.png)
+![Student Achievements](./client/public/screenshots/student-achievements.png)
 *Page showing student badges for completing mini-courses*
 ---
 
