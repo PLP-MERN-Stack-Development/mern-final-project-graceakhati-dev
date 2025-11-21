@@ -21,14 +21,7 @@ dotenv.config();
  */
 const app: Application = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Initialize Passport
-app.use(passport.initialize());
-
-// CORS Configuration
+// CORS Configuration - MUST be before other middleware to handle preflight requests
 // Allowed origins - add your frontend domains here
 // Supports both development (localhost) and production domains
 const allowedOrigins = [
@@ -72,6 +65,13 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Middleware (after CORS)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Initialize Passport
+app.use(passport.initialize());
 
 // Request logging middleware
 // In production, log important requests only
