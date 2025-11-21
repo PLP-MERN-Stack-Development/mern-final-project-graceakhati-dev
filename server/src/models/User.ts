@@ -33,7 +33,6 @@ const userSchema = new Schema<IUser>(
     firebaseUid: {
       type: String,
       sparse: true,
-      index: true,
     },
     name: {
       type: String,
@@ -49,7 +48,6 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
-      index: true,
     },
     password: {
       type: String,
@@ -74,7 +72,6 @@ const userSchema = new Schema<IUser>(
     googleId: {
       type: String,
       sparse: true,
-      index: true,
     },
   },
   {

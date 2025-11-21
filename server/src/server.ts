@@ -33,8 +33,26 @@ const startServer = async (): Promise<void> => {
     console.log(`   FRONTEND_URL: ${process.env.FRONTEND_URL || 'Not set'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    // Connect to Firestore with detailed error handling
-    await initializeFirestore();
+    // Connect to MongoDB (required)
+    const { connectDB } = await import('./config/db');
+    await connectDB();
+
+    // Initialize Firebase Admin (optional - only needed for Firebase Auth token verification)
+    // If Firebase env vars are not set, the server will still work but Firebase auth won't be available
+    const hasFirebaseConfig = process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (hasFirebaseConfig) {
+      try {
+        await initializeFirestore();
+        console.log('✅ Firebase Admin initialized for auth verification');
+      } catch (firebaseError) {
+        console.warn('⚠️  Firebase Admin initialization failed, continuing without Firebase auth:', (firebaseError as Error).message);
+        console.warn('💡 Firebase Auth token verification will not be available');
+      }
+    } else {
+      console.log('ℹ️  Firebase Admin not initialized (env vars not set)');
+      console.log('💡 Firebase Auth token verification will not be available');
+      console.log('💡 Set FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT_KEY to enable Firebase auth');
+    }
 
     // Redis is optional - only initialize if explicitly enabled
     const enableRedis = process.env.ENABLE_REDIS === 'true';
