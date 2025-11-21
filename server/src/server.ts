@@ -1,3 +1,4 @@
+import 'dotenv/config'; // Load environment variables first
 import app from './app';
 import { initializeFirestore } from './config/firestore';
 
@@ -20,10 +21,19 @@ const startServer = async (): Promise<void> => {
     console.log(`📦 Environment: ${NODE_ENV}`);
     console.log(`🔌 Port: ${PORT}`);
     console.log(`🌐 Node Version: ${process.version}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // Log critical environment variables (without exposing secrets)
+    console.log('\n🔐 Environment Variables Check:');
+    console.log(`   FIREBASE_PROJECT_ID: ${process.env.FIREBASE_PROJECT_ID ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   FIREBASE_SERVICE_ACCOUNT_KEY: ${process.env.FIREBASE_SERVICE_ACCOUNT_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   FIREBASE_WEB_API_KEY: ${process.env.FIREBASE_WEB_API_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   JWT_SECRET: ${process.env.JWT_SECRET ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   CLIENT_URL: ${process.env.CLIENT_URL || 'Not set'}`);
+    console.log(`   FRONTEND_URL: ${process.env.FRONTEND_URL || 'Not set'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    // Connect to Firestore
-    console.log('📡 Connecting to Firestore...');
+    // Connect to Firestore with detailed error handling
     await initializeFirestore();
 
     // Redis is optional - only initialize if explicitly enabled

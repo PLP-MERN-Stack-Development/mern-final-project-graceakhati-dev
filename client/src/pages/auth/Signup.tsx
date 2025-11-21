@@ -104,9 +104,29 @@ function SignupPage() {
   }, [navigate, searchParams]);
 
   // Check if user is already authenticated (persist login on refresh)
+  // FIX: Extract OAuth token from URL query parameter
   useEffect(() => {
     const checkAuthState = () => {
       try {
+        // FIX: Check for OAuth token in URL (from Google OAuth redirect)
+        const tokenFromUrl = searchParams.get('token');
+        if (tokenFromUrl) {
+          // Store token in localStorage
+          const authData = {
+            token: tokenFromUrl,
+            isAuthenticated: true,
+            // We'll fetch user details after redirect
+          };
+          localStorage.setItem('planet-path-auth-storage', JSON.stringify(authData));
+          
+          // Remove token from URL for security
+          window.history.replaceState({}, document.title, window.location.pathname);
+          
+          // Redirect to dashboard (will fetch user info via /auth/me)
+          navigate('/student/dashboard', { replace: true });
+          return;
+        }
+        
         const stored = localStorage.getItem('planet-path-auth-storage');
         if (stored) {
           const parsed = JSON.parse(stored);

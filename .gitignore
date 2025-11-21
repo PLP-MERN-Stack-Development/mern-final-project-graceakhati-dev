@@ -25,6 +25,9 @@ secrets.txt
 *.pfx
 credentials.json
 service-account.json
+*-firebase-adminsdk-*.json
+firebase-adminsdk*.json
+*.firebase.json
 
 # Build outputs
 dist/
