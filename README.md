@@ -1063,25 +1063,13 @@ jobs:
 ![Landing Page](screenshots/landing-page.png)
 *Welcome page with course highlights and call-to-action*
 
+### Landing Page
+![Landing Page](screenshots/student-profile.png)
+*Profile page with student information*
+
 ### Course Catalog
 ![Course Catalog](screenshots/course-catalog.png)
 *Browse available courses with filtering options*
-
-### Course Player
-![Course Player](screenshots/course-player.png)
-*Interactive course player with video lessons and progress tracking*
-
-### Enrollment Flow
-![Enrollment](screenshots/enrollment.png)
-*Course enrollment confirmation and progress dashboard*
-
-### Submission UI
-![Submission](screenshots/submission.png)
-*Impact project submission form with file upload and geolocation*
-
-### Leaderboard
-![Leaderboard](screenshots/leaderboard.png)
-*Top users leaderboard with XP rankings and badges*
 
 ### Certification Page
 ![Certification](screenshots/certification.png)
@@ -1091,10 +1079,9 @@ jobs:
 ![Student Dashboard](screenshots/student-dashboard.png)
 *Student dashboard with enrolled courses and progress*
 
-### Instructor Dashboard
-![Instructor Dashboard](screenshots/instructor-dashboard.png)
-*Instructor dashboard with course management and submissions*
-
+### Student Achievements
+![Instructor Dashboard](screenshots/student-achievements.png)
+*Page showing student badges for completing mini-courses*
 ---
 
 ## 11. Roadmap
@@ -1346,12 +1333,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- United Nations SDG framework for inspiration
-- MERN stack community for resources and support
-- IntaSend for payment integration guidance
-- Mux for video streaming solutions
-- All open-source contributors whose tools made this project possible
-- Power Learn Project (PLP) for the MERN Stack Development program
+- Power Learn Project (PLP) - MERN Stack Development 
 
 ---
 
